@@ -153,16 +153,9 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=YOUR_SERVE
 dotnet user-secrets set "GroqApiKey" "your-groq-api-key"
 ```
 
-Alternatively, copy `appsettings.example.json` to `appsettings.json` inside `LifePulse.API/` and fill in your own values — just don't commit it.
 
-### 3. Apply database migrations
 
-```bash
-cd LifePulse.API
-dotnet ef database update
-```
-
-### 4. Run the application
+### 3. Run the application
 
 ```bash
 dotnet run --project LifePulse.API
