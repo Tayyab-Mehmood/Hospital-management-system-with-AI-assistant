@@ -1,0 +1,540 @@
+﻿@page "/patient/appointments"
+@using LifePulse.Shared
+@inject HttpClient Http
+@inject LifePulse.Blazor.CustomAuthStateProvider StateProvider
+
+<PageTitle>My Appointments | LifePulse</PageTitle>
+
+@if (!StateProvider.IsAuthenticated || StateProvider.Role != "Patient")
+{
+    <p style="color:#6B7280; text-align:center; padding-top: 40px;">
+        Access denied. <a href="login" style="color:#2BBFB3;">Sign in</a>
+    </p>
+    return;
+}
+
+<div class="px-3 px-md-4 pt-4 pb-5">
+
+    @* Page Header *@
+    <div class="mb-4">
+        <h2 style="font-size: clamp(20px, 5vw, 26px); font-weight: 700; color: #1A1A2E; margin: 0;">My Appointments</h2>
+        <p style="font-size: 14px; color: #6B7280; margin: 4px 0 0 0;">
+            Browse available doctors and book your appointment instantly.
+        </p>
+    </div>
+
+    @* Tab Toggle *@
+    <div class="d-flex gap-2 mb-4 flex-wrap">
+        <button class="tab-btn @(activeTab == "book" ? "tab-active" : "")"
+                @onclick='() => activeTab = "book"'>
+            <i class="bi bi-person-plus me-2"></i>Book Appointment
+        </button>
+        <button class="tab-btn @(activeTab == "history" ? "tab-active" : "")"
+                @onclick='() => activeTab = "history"'>
+            <i class="bi bi-clock-history me-2"></i>Appointment History
+            @if (myAppointments != null && myAppointments.Any(a => a.Status == "Scheduled"))
+            {
+                <span class="badge-count">@myAppointments.Count(a => a.Status == "Scheduled")</span>
+            }
+        </button>
+    </div>
+
+    @* ============================= *@
+    @*     TAB 1: BOOK APPOINTMENT   *@
+    @* ============================= *@
+    @if (activeTab == "book")
+    {
+        @* Success / Error message *@
+        @if (!string.IsNullOrWhiteSpace(bookingMessage))
+        {
+            <div class="mb-4 p-3 d-flex align-items-start gap-2"
+                 style="background-color: @(bookingSuccess ? "#D1FAF5" : "#FFE4E6");
+                        color: @(bookingSuccess ? "#0D9488" : "#E11D48");
+                        border-radius: 10px; font-size: 14px; font-weight: 500;">
+                <i class="bi @(bookingSuccess ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill")" style="font-size: 18px; flex-shrink:0; margin-top:1px;"></i>
+                <span>@bookingMessage</span>
+            </div>
+        }
+
+        @* Search / Filter Bar *@
+        <div class="row g-2 mb-4">
+            <div class="col-12 col-md-8">
+                <div style="position: relative;">
+                    <i class="bi bi-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #9CA3AF; font-size: 14px;"></i>
+                    <input type="text" class="form-control" placeholder="Search by doctor name or specialization..."
+                           style="background-color: #FFFFFF; border: 1px solid #E6EAF0; border-radius: 10px; padding: 10px 14px 10px 38px; font-size: 14px; color: #1A1A2E;"
+                           @bind="searchTerm" @bind:event="oninput" />
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <select class="form-select" style="background-color: #FFFFFF; border: 1px solid #E6EAF0; border-radius: 10px; padding: 10px 14px; font-size: 14px; color: #1A1A2E;"
+                        @bind="filterDept">
+                    <option value="">All Departments</option>
+                    @if (availableDoctors != null)
+                    {
+                        @foreach (var dept in availableDoctors.Select(d => d.DepartmentName).Distinct().OrderBy(x => x))
+                        {
+                            <option value="@dept">@dept</option>
+                        }
+                    }
+                </select>
+            </div>
+        </div>
+
+        @* Doctor Cards Grid *@
+        @if (availableDoctors == null)
+        {
+            <div class="d-flex justify-content-center py-5">
+                <div class="spinner-border" style="color: #2BBFB3; width: 2rem; height: 2rem;" role="status"></div>
+            </div>
+        }
+        else if (!FilteredDoctors.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-person-x" style="font-size: 48px; color: #D1D5DB;"></i>
+                <p style="color: #6B7280; font-size: 15px; margin-top: 12px;">No doctors match your search.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-3 mb-4">
+                @foreach (var doc in FilteredDoctors)
+                {
+                    bool isSelected = selectedDoctor?.DoctorId == doc.DoctorId;
+                    <div class="col-12 col-sm-6 col-xl-4">
+                        <div class="doctor-card @(isSelected ? "doctor-card-selected" : "")"
+                             @onclick="() => SelectDoctor(doc)">
+
+                            @* Availability badge *@
+                            <div style="position: absolute; top: 14px; right: 14px;">
+                                <span style="font-size: 11px; font-weight: 600; background-color: #D1FAF5; color: #0D9488; padding: 3px 10px; border-radius: 20px;">
+                                    <span style="width: 6px; height: 6px; border-radius: 50%; background-color: #0D9488; display: inline-block; margin-right: 4px;"></span>
+                                    Available
+                                </span>
+                            </div>
+
+                            @* Doctor Avatar *@
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <img src="@(string.IsNullOrWhiteSpace(doc.ProfilePictureUrl) ? "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=256&h=256&q=80" : doc.ProfilePictureUrl)"
+                                     alt="Dr. @doc.FirstName @doc.LastName"
+                                     style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid @(isSelected ? "#2BBFB3" : "#F3F4F6"); flex-shrink:0;" />
+                                <div style="min-width:0;">
+                                    <div style="font-size: 15px; font-weight: 700; color: #1A1A2E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Dr. @doc.FirstName @doc.LastName</div>
+                                    <div style="font-size: 12px; color: #2BBFB3; font-weight: 600;">@doc.Specialization</div>
+                                </div>
+                            </div>
+
+                            @* Tags *@
+                            <div class="d-flex gap-2 mb-3 flex-wrap">
+                                <span class="info-tag"><i class="bi bi-building me-1"></i>@doc.DepartmentName</span>
+                                <span class="info-tag"><i class="bi bi-briefcase me-1"></i>@doc.WorkType</span>
+                            </div>
+
+                            @* Schedule *@
+                            <div class="d-flex align-items-center gap-2 mb-2" style="font-size: 12px; color: #6B7280;">
+                                <i class="bi bi-clock" style="color: #2BBFB3;"></i>
+                                @doc.WorkStartTime – @doc.WorkEndTime
+                            </div>
+                            <div class="mb-2" style="font-size: 12px; color: #6B7280;">
+                                <i class="bi bi-calendar3 me-1" style="color: #2BBFB3;"></i>
+                                @GetShortSchedule(doc.ScheduleDays)
+                            </div>
+
+                            @* Consultation Fee *@
+                            <div class="d-flex align-items-center gap-1 mb-3"
+                                 style="background-color: #FEF9C3; border-radius: 8px; padding: 6px 12px; display: inline-flex !important; width: fit-content;">
+                                <i class="bi bi-currency-dollar" style="color: #854D0E; font-size: 14px;"></i>
+                                <span style="font-size: 13px; font-weight: 700; color: #854D0E;">@doc.ConsultationFee.ToString("0.00")</span>
+                                <span style="font-size: 11px; color: #92400E; margin-left: 2px;">consultation fee</span>
+                            </div>
+
+                            @* Select Button *@
+                            <button class="w-100 @(isSelected ? "btn-book-selected" : "btn-book")"
+                                    @onclick:stopPropagation="true"
+                                    @onclick="() => SelectDoctor(doc)">
+                                @if (isSelected)
+                                {
+                                    <i class="bi bi-check-circle-fill me-2"></i>
+                                    <span>Doctor Selected</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-calendar-plus me-2"></i>
+                                    <span>Book with this Doctor</span>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        @* Booking Form — appears when a doctor is selected *@
+        @if (selectedDoctor != null)
+        {
+            <div class="booking-panel">
+                <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+                    <div style="width: 44px; height: 44px; background-color: #E0F7F5; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink:0;">
+                        <i class="bi bi-calendar-check-fill" style="color: #0D9488; font-size: 20px;"></i>
+                    </div>
+                    <div>
+                        <h5 style="font-size: 16px; font-weight: 700; color: #1A1A2E; margin: 0;">
+                            Confirm Appointment with Dr. @selectedDoctor.FirstName @selectedDoctor.LastName
+                        </h5>
+                        <small style="color: #6B7280;">
+                            @selectedDoctor.Specialization · @selectedDoctor.DepartmentName
+                            <span class="ms-2" style="color: #854D0E; font-weight: 600;">
+                                <i class="bi bi-currency-dollar"></i>@selectedDoctor.ConsultationFee.ToString("0.00") consultation fee
+                            </span>
+                        </small>
+                    </div>
+                </div>
+
+                @* Schedule reminder *@
+                <div class="mb-3 p-2 d-flex align-items-center gap-2"
+                     style="background-color: #EFF6FF; border-radius: 8px; font-size: 12px; color: #1D4ED8;">
+                    <i class="bi bi-info-circle-fill"></i>
+                    <span>
+                        Available: <strong>@GetShortSchedule(selectedDoctor.ScheduleDays)</strong>,
+                        @selectedDoctor.WorkStartTime – @selectedDoctor.WorkEndTime
+                    </span>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-12 col-md-5">
+                        <label class="field-label">Preferred Date & Time</label>
+                        <input type="datetime-local" class="form-control field-input text-dark"
+                               @bind="newBooking.AppointmentDate"
+                               min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" />
+                    </div>
+                    <div class="col-12 col-md-7">
+                        <label class="field-label">Reason for Visit / Notes (optional)</label>
+                        <input type="text" class="form-control field-input text-dark"
+                               placeholder="e.g. Routine cardiac checkup, follow-up visit..."
+                               @bind="newBooking.Notes" />
+                    </div>
+                    <div class="col-12 d-flex gap-2 flex-wrap">
+                        <button class="btn fw-semibold px-4"
+                                style="background-color: #2BBFB3; color: #FFFFFF; border: none; border-radius: 8px; padding: 10px 24px; font-size: 14px;"
+                                @onclick="HandleBookAppointment">
+                            <i class="bi bi-check-circle me-2"></i>Confirm Booking
+                        </button>
+                        <button class="btn fw-semibold px-4"
+                                style="background-color: transparent; color: #6B7280; border: 1px solid #E6EAF0; border-radius: 8px; padding: 10px 24px; font-size: 14px;"
+                                @onclick="ClearSelection">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    @* ============================== *@
+    @*   TAB 2: APPOINTMENT HISTORY   *@
+    @* ============================== *@
+    @if (activeTab == "history")
+    {
+        @if (myAppointments == null)
+        {
+            <div class="d-flex justify-content-center py-5">
+                <div class="spinner-border" style="color: #2BBFB3; width: 2rem; height: 2rem;"></div>
+            </div>
+        }
+        else if (!myAppointments.Any())
+        {
+            <div class="text-center py-5" style="background-color: #FFFFFF; border-radius: 12px; padding: 48px;">
+                <i class="bi bi-calendar-x" style="font-size: 52px; color: #D1D5DB;"></i>
+                <p style="color: #6B7280; font-size: 15px; margin-top: 16px;">No appointments booked yet.</p>
+                <button class="btn mt-2"
+                        style="background-color: #2BBFB3; color: white; border-radius: 8px; padding: 8px 20px; border: none; font-weight: 600;"
+                        @onclick="SwitchToBook">
+                    Book your first appointment
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-column gap-3">
+                @foreach (var app in myAppointments)
+                {
+                    string statusColor = app.Status == "Completed" ? "#0D9488" : app.Status == "Cancelled" ? "#E11D48" : "#854D0E";
+                    string statusBg = app.Status == "Completed" ? "#D1FAF5" : app.Status == "Cancelled" ? "#FFE4E6" : "#FEF9C3";
+
+                    <div style="background-color: #FFFFFF; border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #F3F4F6;">
+                        <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+                            <div class="d-flex align-items-start gap-3">
+                                @* Date Block *@
+                                <div class="text-center flex-shrink-0" style="min-width: 52px; background-color: #F4F6F9; border-radius: 10px; padding: 10px 8px;">
+                                    <div style="font-size: 22px; font-weight: 800; color: #1A1A2E; line-height: 1;">@app.AppointmentDate.Day</div>
+                                    <div style="font-size: 11px; color: #6B7280; text-transform: uppercase; font-weight: 600;">@app.AppointmentDate.ToString("MMM")</div>
+                                    <div style="font-size: 11px; color: #9CA3AF;">@app.AppointmentDate.ToString("HH:mm")</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 15px; font-weight: 700; color: #1A1A2E;">@app.DoctorName</div>
+                                    <div style="font-size: 13px; color: #6B7280; margin-top: 2px;">
+                                        <i class="bi bi-building me-1"></i>@app.DepartmentName
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(app.Notes))
+                                    {
+                                        <div style="font-size: 12px; color: #9CA3AF; margin-top: 4px;">
+                                            <i class="bi bi-chat-text me-1"></i>@app.Notes
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span style="font-size: 12px; font-weight: 600; background-color: @statusBg; color: @statusColor; padding: 5px 14px; border-radius: 20px;">
+                                    @app.Status
+                                </span>
+                                @if (app.Status == "Scheduled")
+                                {
+                                    <button class="btn btn-sm"
+                                            style="border: 1px solid #E11D48; color: #E11D48; background: transparent; border-radius: 8px; font-size: 12px; padding: 5px 14px; font-weight: 500;"
+                                            @onclick="() => HandleCancel(app.AppointmentId)">
+                                        <i class="bi bi-x-circle me-1"></i>Cancel
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+
+</div>
+
+<style>
+    .tab-btn {
+        background-color: #FFFFFF;
+        border: 1px solid #E6EAF0;
+        border-radius: 10px;
+        padding: 9px 16px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #6B7280;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        position: relative;
+    }
+    .tab-btn:hover { border-color: #2BBFB3; color: #2BBFB3; }
+    .tab-active {
+        background-color: #2BBFB3 !important;
+        color: #FFFFFF !important;
+        border-color: #2BBFB3 !important;
+        font-weight: 600;
+    }
+    .badge-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #E11D48;
+        color: white;
+        font-size: 10px;
+        font-weight: 700;
+        margin-left: 8px;
+    }
+    .tab-active .badge-count { background-color: rgba(255,255,255,0.3); }
+    .doctor-card {
+        background-color: #FFFFFF;
+        border-radius: 14px;
+        padding: 18px;
+        border: 2px solid #F3F4F6;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        height: 100%;
+    }
+    .doctor-card:hover {
+        border-color: #2BBFB3;
+        box-shadow: 0 4px 16px rgba(43, 191, 179, 0.12);
+        transform: translateY(-2px);
+    }
+    .doctor-card-selected {
+        border-color: #2BBFB3 !important;
+        background-color: #F0FDFB !important;
+        box-shadow: 0 4px 20px rgba(43, 191, 179, 0.2) !important;
+    }
+    .info-tag {
+        font-size: 11px;
+        color: #6B7280;
+        background-color: #F4F6F9;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+    .btn-book {
+        background-color: #F4F6F9;
+        color: #1A1A2E;
+        border: none;
+        border-radius: 8px;
+        padding: 9px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .btn-book:hover { background-color: #2BBFB3; color: #FFFFFF; }
+    .btn-book-selected {
+        background-color: #2BBFB3;
+        color: #FFFFFF;
+        border: none;
+        border-radius: 8px;
+        padding: 9px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .booking-panel {
+        background: linear-gradient(135deg, #F0FDFB 0%, #FFFFFF 100%);
+        border: 2px solid #2BBFB3;
+        border-radius: 14px;
+        padding: 24px;
+        margin-top: 8px;
+        animation: slideDown 0.3s ease;
+    }
+    @@keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .field-label {
+        font-size: 12px;
+        color: #6B7280;
+        font-weight: 600;
+        margin-bottom: 4px;
+        display: block;
+    }
+    .field-input {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E6EAF0 !important;
+        border-radius: 8px !important;
+        padding: 10px 14px !important;
+        font-size: 14px;
+    }
+    @@media (max-width: 576px) {
+        .booking-panel { padding: 16px; }
+    }
+</style>
+
+@code {
+    private List<AppointmentDto>? myAppointments;
+    private List<DoctorDto>? availableDoctors;
+    private DoctorDto? selectedDoctor;
+    private AppointmentDto newBooking = new() { AppointmentDate = DateTime.Now.AddDays(1) };
+    private string bookingMessage = "";
+    private bool bookingSuccess = false;
+    private string activeTab = "book";
+    private string searchTerm = "";
+    private string filterDept = "";
+
+    private IEnumerable<DoctorDto> FilteredDoctors =>
+        availableDoctors?.Where(d =>
+            (string.IsNullOrWhiteSpace(searchTerm) ||
+             $"{d.FirstName} {d.LastName} {d.Specialization}".Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            &&
+            (string.IsNullOrWhiteSpace(filterDept) || d.DepartmentName == filterDept)
+        ) ?? Enumerable.Empty<DoctorDto>();
+
+    // Convert "Monday, Tuesday, Wednesday, Thursday, Friday" → "Mon–Fri" or "Mon, Wed, Fri"
+    private string GetShortSchedule(string scheduleDays)
+    {
+        if (string.IsNullOrWhiteSpace(scheduleDays)) return "—";
+        var days = scheduleDays.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (days.Length == 0) return "—";
+        // Shorten each day to 3 chars
+        var shorts = days.Select(d => d.Length >= 3 ? d[..3] : d).ToList();
+        if (shorts.Count == 1) return shorts[0];
+        return $"{shorts.First()}–{shorts.Last()}";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!StateProvider.IsAuthenticated || StateProvider.Role != "Patient") return;
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        int pid = StateProvider.UserId;
+        try
+        {
+            availableDoctors = await Http.GetFromJsonAsync<List<DoctorDto>>("api/Patient/available-doctors");
+            myAppointments = await Http.GetFromJsonAsync<List<AppointmentDto>>($"api/Patient/{pid}/appointments");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
+    }
+
+    private void SelectDoctor(DoctorDto doc)
+    {
+        if (selectedDoctor?.DoctorId == doc.DoctorId)
+            selectedDoctor = null;
+        else
+        {
+            selectedDoctor = doc;
+            newBooking.DoctorId = doc.DoctorId;
+            bookingMessage = "";
+        }
+    }
+
+    private void ClearSelection()
+    {
+        selectedDoctor = null;
+        bookingMessage = "";
+    }
+
+    private void SwitchToBook() => activeTab = "book";
+
+    private async Task HandleBookAppointment()
+    {
+        if (selectedDoctor == null) return;
+        bookingMessage = "";
+
+        int pid = StateProvider.UserId;
+        newBooking.DoctorId = selectedDoctor.DoctorId;
+
+        var response = await Http.PostAsJsonAsync($"api/Patient/{pid}/appointments", newBooking);
+        if (response.IsSuccessStatusCode)
+        {
+            bookingSuccess = true;
+            bookingMessage = $"Appointment booked with Dr. {selectedDoctor.FirstName} {selectedDoctor.LastName} on {newBooking.AppointmentDate:dd MMM yyyy, HH:mm}";
+            selectedDoctor = null;
+            newBooking = new() { AppointmentDate = DateTime.Now.AddDays(1) };
+            await LoadData();
+            await Task.Delay(1500);
+            activeTab = "history";
+            StateHasChanged();
+        }
+        else
+        {
+            bookingSuccess = false;
+            // Read server error message (conflict / schedule validation)
+            var errorBody = await response.Content.ReadAsStringAsync();
+            // Strip JSON quotes if the server returned a plain string
+            bookingMessage = errorBody.Trim('"', ' ');
+            if (string.IsNullOrWhiteSpace(bookingMessage))
+                bookingMessage = "Failed to book appointment. Please try again.";
+        }
+    }
+
+    private async Task HandleCancel(int appointmentId)
+    {
+        int pid = StateProvider.UserId;
+        var response = await Http.PutAsJsonAsync($"api/Patient/{pid}/appointments/{appointmentId}/cancel", "");
+        if (response.IsSuccessStatusCode) await LoadData();
+    }
+}

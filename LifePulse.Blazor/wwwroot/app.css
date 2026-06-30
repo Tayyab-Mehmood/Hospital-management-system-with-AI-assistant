@@ -1,0 +1,42 @@
+/* --- Global Reset --- */
+:root {
+    --primary-teal: #2BBFB3;
+    --bg-light: #F8F9FA;
+    --text-main: #1A1A2E;
+    --text-muted: #6B7280;
+}
+
+html, body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-light) !important;
+    color: var(--text-main) !important;
+}
+
+/* --- Sidebar Styling (Light Theme) --- */
+.sidebar {
+    background-color: #FFFFFF !important;
+    border-right: 1px solid #E5E7EB !important;
+}
+
+/* --- Global Component Overrides --- */
+.nav-link {
+    color: var(--text-muted) !important;
+    transition: all 0.2s ease;
+}
+
+    .nav-link:hover {
+        color: var(--primary-teal) !important;
+        background-color: #F4F6F9 !important;
+    }
+
+    .nav-link.active {
+        color: var(--primary-teal) !important;
+        background-color: #E0F7F5 !important;
+        font-weight: 600;
+    }
+
+/* Utility to ensure buttons match Dashboard */
+.btn-primary {
+    background-color: var(--primary-teal);
+    border: none;
+}

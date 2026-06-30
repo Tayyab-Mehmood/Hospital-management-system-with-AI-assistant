@@ -1,0 +1,279 @@
+﻿@page "/patient/prescriptions"
+@using LifePulse.Shared
+@inject HttpClient Http
+@inject LifePulse.Blazor.CustomAuthStateProvider StateProvider
+
+<PageTitle>My Prescriptions | LifePulse</PageTitle>
+
+@if (!StateProvider.IsAuthenticated || StateProvider.Role != "Patient")
+{
+    <p style="color:#6B7280; text-align:center; padding-top: 40px;">
+        Access denied. <a href="login" style="color:#2BBFB3;">Sign in</a>
+    </p>
+    return;
+}
+
+<div class="px-4 pt-4 pb-5">
+
+    @* Header *@
+    <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+        <div>
+            <h2 style="font-size: 26px; font-weight: 700; color: #1A1A2E; margin: 0;">My Prescriptions</h2>
+            <p style="font-size: 14px; color: #6B7280; margin: 4px 0 0 0;">
+                All medications prescribed by your doctors.
+            </p>
+        </div>
+        @* Summary Badge *@
+        @if (prescriptions != null && prescriptions.Any())
+        {
+            <div class="d-flex gap-2">
+                <div style="background-color: #D1FAF5; color: #0D9488; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px;">
+                    <i class="bi bi-capsule me-1"></i>@prescriptions.Count(p => p.Status == "Active") Active
+                </div>
+                <div style="background-color: #F3F4F6; color: #6B7280; font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px;">
+                    @prescriptions.Count Total
+                </div>
+            </div>
+        }
+    </div>
+
+    @* Filter Tabs *@
+    @if (prescriptions != null && prescriptions.Any())
+    {
+        <div class="d-flex gap-2 mb-4 flex-wrap">
+            <button class="filter-btn @(activeFilter == "All" ? "filter-active" : "")"
+                    @onclick='() => activeFilter = "All"'>
+                All (@prescriptions.Count)
+            </button>
+            <button class="filter-btn @(activeFilter == "Active" ? "filter-active" : "")"
+                    @onclick='() => activeFilter = "Active"'>
+                <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #0D9488; display: inline-block; margin-right: 6px;"></span>
+                Active (@prescriptions.Count(p => p.Status == "Active"))
+            </button>
+            <button class="filter-btn @(activeFilter == "Completed" ? "filter-active" : "")"
+                    @onclick='() => activeFilter = "Completed"'>
+                <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #6B7280; display: inline-block; margin-right: 6px;"></span>
+                Completed (@prescriptions.Count(p => p.Status == "Completed"))
+            </button>
+            <button class="filter-btn @(activeFilter == "Discontinued" ? "filter-active" : "")"
+                    @onclick='() => activeFilter = "Discontinued"'>
+                <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #E11D48; display: inline-block; margin-right: 6px;"></span>
+                Discontinued (@prescriptions.Count(p => p.Status == "Discontinued"))
+            </button>
+        </div>
+    }
+
+    @* Loading *@
+    @if (prescriptions == null)
+    {
+        <div class="d-flex justify-content-center py-5">
+            <div class="spinner-border" style="color: #2BBFB3; width: 2rem; height: 2rem;"></div>
+        </div>
+    }
+    else if (!prescriptions.Any())
+    {
+        @* Empty State *@
+        <div style="background-color: #FFFFFF; border-radius: 14px; padding: 60px 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); text-align: center;">
+            <div class="d-flex align-items-center justify-content-center mx-auto mb-4"
+                 style="width: 80px; height: 80px; background-color: #F4F6F9; border-radius: 50%;">
+                <i class="bi bi-prescription2" style="font-size: 36px; color: #D1D5DB;"></i>
+            </div>
+            <h5 style="font-weight: 700; color: #1A1A2E; margin-bottom: 8px;">No Prescriptions Yet</h5>
+            <p style="color: #6B7280; font-size: 14px; max-width: 320px; margin: 0 auto;">
+                Your doctor hasn't written any prescriptions for you yet. They will appear here after your appointments.
+            </p>
+        </div>
+    }
+    else
+    {
+        var filtered = activeFilter == "All"
+            ? prescriptions
+            : prescriptions.Where(p => p.Status == activeFilter).ToList();
+
+        @if (!filtered.Any())
+        {
+            <div style="background-color: #FFFFFF; border-radius: 14px; padding: 40px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                <p style="color: #6B7280; font-size: 14px; margin: 0;">No @activeFilter.ToLower() prescriptions found.</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var rx in filtered)
+                {
+                    string statusColor = rx.Status == "Active" ? "#0D9488"
+                                       : rx.Status == "Completed" ? "#6B7280"
+                                       : "#E11D48";
+                    string statusBg = rx.Status == "Active" ? "#D1FAF5"
+                                     : rx.Status == "Completed" ? "#F3F4F6"
+                                     : "#FFE4E6";
+                    string borderColor = rx.Status == "Active" ? "#2BBFB3"
+                                        : rx.Status == "Completed" ? "#E5E7EB"
+                                        : "#FECDD3";
+
+                    bool isExpiringSoon = rx.Status == "Active" && rx.EndDate <= DateTime.Today.AddDays(3);
+                    int daysRemaining = (rx.EndDate - DateTime.Today).Days;
+
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div style="background-color: #FFFFFF; border-radius: 14px; padding: 22px;
+                            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+                            border-left: 4px solid @borderColor;
+                            border-top: 1px solid #F3F4F6;
+                            border-right: 1px solid #F3F4F6;
+                            border-bottom: 1px solid #F3F4F6;
+                            height: 100%;">
+
+                            @* Top Row: Medicine + Status *@
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div style="width: 40px; height: 40px; background-color: @statusBg; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-capsule-pill" style="font-size: 18px; color: @statusColor;"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 15px; font-weight: 700; color: #1A1A2E;">@rx.MedicineName</div>
+                                        <div style="font-size: 12px; color: #6B7280;">@rx.Dosage</div>
+                                    </div>
+                                </div>
+                                <span style="font-size: 11px; font-weight: 600; background-color: @statusBg; color: @statusColor; padding: 3px 10px; border-radius: 20px; white-space: nowrap;">
+                                    @rx.Status
+                                </span>
+                            </div>
+
+                            @* Expiring Soon Warning *@
+                            @if (isExpiringSoon)
+                            {
+                                <div class="d-flex align-items-center gap-2 mb-3 p-2"
+                                     style="background-color: #FEF9C3; border-radius: 8px; font-size: 12px; color: #854D0E; font-weight: 500;">
+                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                    @(daysRemaining <= 0 ? "Expires today!" : $"Expires in {daysRemaining} day{(daysRemaining == 1 ? "" : "s")}")
+                                </div>
+                            }
+
+                            @* Details Grid *@
+                            <div class="d-flex flex-column gap-2 mb-3">
+                                <div class="detail-row">
+                                    <i class="bi bi-repeat" style="color: #2BBFB3;"></i>
+                                    <span class="detail-label">Frequency</span>
+                                    <span class="detail-value">@rx.Frequency</span>
+                                </div>
+                                <div class="detail-row">
+                                    <i class="bi bi-calendar-event" style="color: #2BBFB3;"></i>
+                                    <span class="detail-label">Start Date</span>
+                                    <span class="detail-value">@rx.StartDate.ToString("dd MMM yyyy")</span>
+                                </div>
+                                <div class="detail-row">
+                                    <i class="bi bi-calendar-check" style="color: @(isExpiringSoon ? "#E11D48" : "#2BBFB3");"></i>
+                                    <span class="detail-label">End Date</span>
+                                    <span class="detail-value" style="color: @(isExpiringSoon ? "#E11D48" : "inherit"); font-weight: @(isExpiringSoon ? "700" : "500");">
+                                        @rx.EndDate.ToString("dd MMM yyyy")
+                                    </span>
+                                </div>
+                                <div class="detail-row">
+                                    <i class="bi bi-person-badge" style="color: #2BBFB3;"></i>
+                                    <span class="detail-label">Prescribed by</span>
+                                    <span class="detail-value">@(string.IsNullOrWhiteSpace(rx.DoctorName) ? "Your Doctor" : rx.DoctorName)</span>
+                                </div>
+                                <div class="detail-row">
+                                    <i class="bi bi-clock-history" style="color: #2BBFB3;"></i>
+                                    <span class="detail-label">Prescribed on</span>
+                                    <span class="detail-value">@rx.CreatedAt.ToString("dd MMM yyyy")</span>
+                                </div>
+                            </div>
+
+                            @* Duration Progress Bar (only for Active) *@
+                            @if (rx.Status == "Active")
+                            {
+                                double totalDays = (rx.EndDate - rx.StartDate).TotalDays;
+                                double elapsed = (DateTime.Today - rx.StartDate).TotalDays;
+                                int progressPct = totalDays > 0 ? (int)Math.Min(elapsed / totalDays * 100, 100) : 100;
+                                string progressColor = progressPct >= 80 ? "#E11D48" : "#2BBFB3";
+
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span style="font-size: 11px; color: #9CA3AF;">Course progress</span>
+                                        <span style="font-size: 11px; font-weight: 600; color: @progressColor;">@progressPct%</span>
+                                    </div>
+                                    <div style="height: 4px; background-color: #F3F4F6; border-radius: 4px;">
+                                        <div style="width: @(progressPct)%; height: 4px; background-color: @progressColor; border-radius: 4px; transition: width 0.5s ease;"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .filter-btn {
+        background-color: #FFFFFF;
+        border: 1px solid #E6EAF0;
+        border-radius: 20px;
+        padding: 7px 16px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #6B7280;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+    }
+
+        .filter-btn:hover {
+            border-color: #2BBFB3;
+            color: #2BBFB3;
+        }
+
+    .filter-active {
+        background-color: #2BBFB3 !important;
+        color: #FFFFFF !important;
+        border-color: #2BBFB3 !important;
+        font-weight: 600;
+    }
+
+    .detail-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+    }
+
+    .detail-label {
+        color: #9CA3AF;
+        font-size: 12px;
+        min-width: 90px;
+    }
+
+    .detail-value {
+        color: #1A1A2E;
+        font-weight: 500;
+        font-size: 13px;
+    }
+</style>
+
+@code {
+    private List<PrescriptionDto>? prescriptions;
+    private string activeFilter = "All";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!StateProvider.IsAuthenticated || StateProvider.Role != "Patient") return;
+        await LoadPrescriptions();
+    }
+
+    private async Task LoadPrescriptions()
+    {
+        try
+        {
+            prescriptions = await Http.GetFromJsonAsync<List<PrescriptionDto>>(
+                $"api/Patient/{StateProvider.UserId}/prescriptions");
+        }
+        catch (Exception ex)
+        {
+            prescriptions = new List<PrescriptionDto>();
+            Console.WriteLine($"Prescriptions load error: {ex.Message}");
+        }
+    }
+}

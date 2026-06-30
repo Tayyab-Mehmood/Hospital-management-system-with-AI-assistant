@@ -1,0 +1,166 @@
+﻿@page "/login"
+@using LifePulse.Shared
+@inject HttpClient Http
+@inject NavigationManager Nav
+@inject LifePulse.Blazor.CustomAuthStateProvider StateProvider
+
+<PageTitle>Sign In | LifePulse</PageTitle>
+
+<div class="login-fullscreen-backdrop d-flex align-items-center justify-content-center text-dark">
+    <div class="container animate-fade-in py-4">
+        <div class="row justify-content-center">
+            <div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4 px-3">
+
+                <div class="bg-white form-card-panel text-center">
+
+                    <div class="mb-3 d-inline-flex align-items-center justify-content-center custom-logo-wrapper bg-white">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQvEnYxOaghA2UPK-hYtD41jhYAuU2nrrKpg&s"
+                             alt="LifePulse Logo" class="custom-logo-img" />
+                    </div>
+
+                    <h3 style="font-weight: 700; color: #1A1A2E; margin: 0; letter-spacing: -0.5px;">LifePulse HMS</h3>
+                    <p style="color: #6B7280; font-size: 14px; margin: 4px 0 24px 0;">Clinical Information Portal</p>
+
+                    @if (!string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        <div class="alert alert-danger p-2 small border-0 text-center mb-3"
+                             style="background-color: #FFE4E6; color: #E11D48; border-radius: 8px;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> @errorMessage
+                        </div>
+                    }
+
+                    @if (isFirstLoginOverlay)
+                    {
+                        <h5 style="font-weight: 700; color: #1A1A2E; margin-bottom: 8px; text-align: left;">Choose Personal Password</h5>
+                        <p style="color: #6B7280; font-size: 13px; margin-bottom: 20px; text-align: left;">
+                            Please create a unique private password to activate your workspace.
+                        </p>
+                        <EditForm Model="resetModel" OnValidSubmit="HandlePasswordReset">
+                            <div class="mb-3 text-start">
+                                <label style="font-size: 12px; font-weight: 600; color: #6B7280; margin-bottom: 4px;">New Secure Password</label>
+                                <input type="password" class="form-control text-dark"
+                                       style="background-color: #F9FAFB; border: 1px solid #E6EAF0; border-radius: 8px; padding: 10px 14px;"
+                                       placeholder="Create password" @bind="resetModel.NewPassword" required />
+                            </div>
+                            <button type="submit" class="btn fw-semibold w-100 mt-2"
+                                    style="background-color: #2BBFB3; color: #FFFFFF; border: none; border-radius: 8px; padding: 10px 14px;">
+                                Activate My Portal
+                            </button>
+                        </EditForm>
+                    }
+                    else
+                    {
+                        <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+                            <div class="mb-3 text-start">
+                                <label style="font-size: 12px; font-weight: 600; color: #6B7280; margin-bottom: 4px;">Username</label>
+                                <input type="text" class="form-control text-dark"
+                                       style="background-color: #F9FAFB; border: 1px solid #E6EAF0; border-radius: 8px; padding: 10px 14px;"
+                                       placeholder="Enter username" @bind="loginModel.Username" required />
+                            </div>
+                            <div class="mb-4 text-start">
+                                <label style="font-size: 12px; font-weight: 600; color: #6B7280; margin-bottom: 4px;">Password</label>
+                                <input type="password" class="form-control text-dark"
+                                       style="background-color: #F9FAFB; border: 1px solid #E6EAF0; border-radius: 8px; padding: 10px 14px;"
+                                       placeholder="••••••••••••" @bind="loginModel.Password" required />
+                            </div>
+                            <button type="submit" class="btn fw-semibold w-100"
+                                    style="background-color: #2BBFB3; color: #FFFFFF; border: none; border-radius: 8px; padding: 10px 14px;">
+                                Sign In
+                            </button>
+                        </EditForm>
+
+                        <div class="mt-4 pt-3" style="border-top: 1px solid #F3F4F6;">
+                            <p style="font-size: 13px; color: #6B7280; margin: 0;">
+                                New patient?
+                                <a href="patient/register" style="color: #2BBFB3; font-weight: 600; text-decoration: none;">Create an account</a>
+                            </p>
+                        </div>
+                    }
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .login-fullscreen-backdrop {
+        position: fixed; top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        z-index: 99999 !important;
+        background: url('https://png.pngtree.com/background/20250207/original/pngtree-room-at-hospital-blurry-background-picture-image_15546033.jpg') no-repeat center center;
+        background-size: cover; overflow-y: auto;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    .custom-logo-wrapper {
+        width: 72px; height: 72px;
+        border-radius: 16px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+        overflow: hidden; padding: 4px;
+    }
+    .custom-logo-img { width: 100%; height: 100%; object-fit: contain; border-radius: 12px; }
+    .form-card-panel { border-radius: 16px; padding: 36px 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+    .animate-fade-in { animation: loginCardFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @@keyframes loginCardFade {
+        from { opacity: 0; transform: translateY(16px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @@media (max-width: 400px) {
+        .form-card-panel { padding: 24px 16px; }
+    }
+</style>
+
+@code {
+    private LoginRequestDto loginModel = new();
+    private PasswordResetDto resetModel = new();
+    private string errorMessage = "";
+    private bool isFirstLoginOverlay = false;
+    private AuthResponseDto? temporalAuthStorage;
+
+    private async Task HandleLogin()
+    {
+        errorMessage = "";
+        var response = await Http.PostAsJsonAsync("api/Auth/login", loginModel);
+        if (response.IsSuccessStatusCode)
+        {
+            var result = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
+            if (result != null && result.IsSuccess)
+            {
+                if (result.IsFirstLogin && result.Role == "Doctor")
+                {
+                    temporalAuthStorage = result;
+                    resetModel.UserId = result.UserId;
+                    isFirstLoginOverlay = true;
+                }
+                else
+                {
+                    FinalizeNavigationSession(result);
+                }
+            }
+            else
+            {
+                errorMessage = result?.ErrorMessage ?? "Invalid sign in attempt.";
+            }
+        }
+        else
+        {
+            errorMessage = "Unable to reach the server. Please try again.";
+        }
+    }
+
+    private async Task HandlePasswordReset()
+    {
+        if (string.IsNullOrWhiteSpace(resetModel.NewPassword) || temporalAuthStorage == null) return;
+        var response = await Http.PostAsJsonAsync("api/Auth/reset-password", resetModel);
+        if (response.IsSuccessStatusCode)
+            FinalizeNavigationSession(temporalAuthStorage);
+    }
+
+    private void FinalizeNavigationSession(AuthResponseDto auth)
+    {
+        StateProvider.MarkUserAsAuthenticated(loginModel.Username, auth.FullName, auth.Role, auth.UserId);
+        if (auth.Role == "Admin") Nav.NavigateTo("");
+        else if (auth.Role == "Doctor") Nav.NavigateTo("doctor/portal");
+        else if (auth.Role == "Patient") Nav.NavigateTo("patient/dashboard");
+    }
+}

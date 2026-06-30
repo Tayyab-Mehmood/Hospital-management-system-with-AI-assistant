@@ -1,0 +1,461 @@
+﻿@page "/patient/register"
+@using LifePulse.Shared
+@inject HttpClient Http
+@inject NavigationManager Nav
+@inject LifePulse.Blazor.CustomAuthStateProvider StateProvider
+@inject IJSRuntime JS
+
+<PageTitle>Patient Registration | LifePulse</PageTitle>
+
+<!-- Fixed toast error — always visible at bottom-center, no scrolling needed -->
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="lp-toast-error" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span>@errorMessage</span>
+        <button class="lp-toast-close" @onclick='() => errorMessage = ""' aria-label="Dismiss">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+}
+
+<div class="reg-backdrop">
+    <div class="reg-scroll-area">
+        <div class="container-fluid px-2 px-sm-3 py-3 py-md-4">
+            <div class="row justify-content-center m-0">
+                <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5 col-xxl-4 p-0 px-sm-2">
+
+                    <div class="reg-card animate-fade-in">
+
+                        @* ── Header ── *@
+                        <div class="text-center mb-3">
+                            <div class="reg-icon-box mx-auto mb-2">
+                                <i class="bi bi-person-plus-fill" style="font-size: 22px; color: #0D9488;"></i>
+                            </div>
+                            <h4 class="reg-title">Create Patient Account</h4>
+                            <p class="reg-subtitle">Register to access your personal health portal</p>
+                        </div>
+
+                        @* ── Success State ── *@
+                        @if (registrationSuccess)
+                        {
+                            <div class="text-center py-3">
+                                <div class="reg-success-icon mx-auto mb-2">
+                                    <i class="bi bi-check-lg" style="font-size: 26px; color: #0D9488;"></i>
+                                </div>
+                                <h5 style="font-weight: 700; color: #1A1A2E; font-size: 16px;">Registration Successful!</h5>
+                                <p style="color: #6B7280; font-size: 13px;">Redirecting to your portal...</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <EditForm Model="model" OnValidSubmit="HandleRegister">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+
+                                @* ── Profile Photo ── *@
+                                <div class="text-center mb-3">
+                                    <div class="profile-photo-wrapper mx-auto mb-1"
+                                         @onclick="TriggerFileInput" title="Click to upload photo">
+                                        @if (!string.IsNullOrEmpty(profileImageDataUrl))
+                                        {
+                                            <img src="@profileImageDataUrl" alt="Profile" class="profile-photo-img" />
+                                        }
+                                        else
+                                        {
+                                            <div class="profile-photo-placeholder">
+                                                <i class="bi bi-person-fill" style="font-size: 32px; color: #CBD5E0;"></i>
+                                            </div>
+                                        }
+                                        <div class="profile-photo-overlay">
+                                            <i class="bi bi-camera-fill" style="font-size: 16px;"></i>
+                                        </div>
+                                    </div>
+                                    <InputFile id="profilePhotoInput" OnChange="HandleImageSelected"
+                                               accept="image/jpeg,image/png,image/webp"
+                                               style="display:none;" />
+                                    <p class="reg-hint">Click to add a profile photo (optional)</p>
+                                    @if (!string.IsNullOrEmpty(imageError))
+                                    {
+                                        <p class="reg-error-text">@imageError</p>
+                                    }
+                                </div>
+
+                                @* ── Section: Personal Info ── *@
+                                <p class="reg-section-label">Personal Information</p>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <label class="field-label">First Name</label>
+                                        <input type="text" class="form-control field-input" placeholder="Jane" @bind="model.FirstName" required />
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="field-label">Last Name</label>
+                                        <input type="text" class="form-control field-input" placeholder="Doe" @bind="model.LastName" required />
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="field-label">Gender</label>
+                                        <select class="form-select field-input" @bind="model.Gender" required>
+                                            <option value="">-- Select --</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="field-label">Date of Birth</label>
+                                        <input type="date" class="form-control field-input" @bind="model.DateOfBirth" required />
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="field-label">Blood Group</label>
+                                        <select class="form-select field-input" @bind="model.BloodGroup">
+                                            <option value="">-- Select --</option>
+                                            <option>A+</option><option>A-</option>
+                                            <option>B+</option><option>B-</option>
+                                            <option>AB+</option><option>AB-</option>
+                                            <option>O+</option><option>O-</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="field-label">Phone Number</label>
+                                        <input type="text" class="form-control field-input" placeholder="+92 300 1234567" @bind="model.Phone" required />
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="field-label">Email Address</label>
+                                        <input type="email"
+       class="form-control field-input"
+       placeholder="you@email.com"
+       @bind="model.Email"
+       required />
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="field-label">Emergency Contact</label>
+                                        <input type="text" class="form-control field-input" placeholder="Name & phone of emergency contact" @bind="model.EmergencyContact" />
+                                    </div>
+                                </div>
+
+                                @* ── Section: Credentials ── *@
+                                <p class="reg-section-label mt-2">Portal Login Credentials</p>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-12">
+                                        <label class="field-label">Username</label>
+                                        <input type="text" class="form-control field-input" placeholder="e.g. janedoe95" @bind="model.Username" required />
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="field-label">Password</label>
+                                        <input type="password" class="form-control field-input" placeholder="••••••••" @bind="model.PasswordHash" required />
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn reg-submit-btn w-100">
+                                    <i class="bi bi-shield-check me-2"></i>Create My Account
+                                </button>
+                            </EditForm>
+
+                            <div class="text-center mt-3 pt-3 reg-footer-divider">
+                                <p style="font-size: 13px; color: #6B7280; margin: 0;">
+                                    Already have an account?
+                                    <a href="login" style="color: #2BBFB3; font-weight: 600; text-decoration: none;">Sign In</a>
+                                </p>
+                            </div>
+                        }
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private PatientDto model = new() { DateOfBirth = DateTime.Today.AddYears(-25) };
+    private string errorMessage = "";
+    private bool registrationSuccess = false;
+
+    private string profileImageDataUrl = "";
+    private string imageError = "";
+
+    private async Task HandleImageSelected(InputFileChangeEventArgs e)
+    {
+        imageError = "";
+        var file = e.File;
+
+        if (file.Size > 2 * 1024 * 1024) { imageError = "Image must be under 2 MB."; return; }
+
+        var allowedTypes = new[] { "image/jpeg", "image/png", "image/webp" };
+        if (!allowedTypes.Contains(file.ContentType)) { imageError = "Only JPG, PNG, or WEBP images are allowed."; return; }
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var base64 = Convert.ToBase64String(ms.ToArray());
+            profileImageDataUrl = $"data:{file.ContentType};base64,{base64}";
+            model.ProfileImageBase64 = base64;
+            model.ProfileImageMimeType = file.ContentType;
+        }
+        catch { imageError = "Failed to load image. Please try again."; }
+    }
+
+    private async Task TriggerFileInput()
+    {
+        await JS.InvokeVoidAsync("eval", "document.getElementById('profilePhotoInput').click()");
+    }
+
+    private async Task HandleRegister()
+    {
+        errorMessage = "";
+        // Email format validation
+        if (!string.IsNullOrWhiteSpace(model.Email))
+        {
+            var emailRegex = new System.Text.RegularExpressions.Regex(
+                @"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$");
+            if (!emailRegex.IsMatch(model.Email))
+            { errorMessage = "Please enter a valid email address (e.g. name@domain.com)."; return; }
+        }
+        var response = await Http.PostAsJsonAsync("api/Auth/patient/register", model);
+        if (response.IsSuccessStatusCode)
+        {
+            var result = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
+            if (result != null && result.IsSuccess)
+            {
+                registrationSuccess = true;
+                StateProvider.MarkUserAsAuthenticated(model.Username, result.FullName, "Patient", result.UserId);
+                await Task.Delay(1500);
+                Nav.NavigateTo("patient/dashboard");
+            }
+            else { errorMessage = result?.ErrorMessage ?? "Registration failed. Please try again."; }
+        }
+        else { errorMessage = "Server error during registration. Please try again."; }
+    }
+}
+
+<style>
+    /* ── Hide sidebar/nav on this page ── */
+    .sidebar, .nav-menu, .navbar-toggler, .top-row { display: none !important; }
+
+    /* ── Backdrop fills the whole screen ── */
+    .reg-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 999999;
+        background: url('https://png.pngtree.com/background/20250207/original/pngtree-room-at-hospital-blurry-background-picture-image_15546033.jpg')
+            center center / cover no-repeat;
+    }
+
+    /* ── Scroll wrapper sits on top, fills backdrop ── */
+    .reg-scroll-area {
+        position: absolute;
+        inset: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .reg-scroll-area > .container-fluid {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+
+    /* ── Card ── */
+    .reg-card {
+        background: #FFFFFF;
+        border-radius: 14px;
+        padding: 20px 18px;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.14);
+        margin-bottom: 16px;
+    }
+
+    /* ── Header typography ── */
+    .reg-title    { font-size: 1.15rem; font-weight: 700; color: #1A1A2E; margin: 0; }
+    .reg-subtitle { font-size: 12px; color: #6B7280; margin: 2px 0 0 0; }
+
+    /* ── Section labels ── */
+    .reg-section-label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        color: #2BBFB3;
+        margin: 0 0 8px 0;
+    }
+
+    /* ── Form fields ── */
+    .field-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #6B7280;
+        margin-bottom: 3px;
+        display: block;
+    }
+
+    .field-input {
+        background-color: #F9FAFB !important;
+        border: 1px solid #E6EAF0 !important;
+        border-radius: 8px !important;
+        padding: 8px 10px !important;
+        font-size: 13px;
+        color: #1A1A2E;
+    }
+
+    .field-input:focus {
+        border-color: #2BBFB3 !important;
+        box-shadow: 0 0 0 3px rgba(43, 191, 179, 0.12) !important;
+        outline: none;
+    }
+
+    /* ── Icon box ── */
+    .reg-icon-box {
+        width: 52px;
+        height: 52px;
+        background-color: #D1FAF5;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* ── Profile photo ── */
+    .profile-photo-wrapper {
+        width: 76px;
+        height: 76px;
+        border-radius: 50%;
+        border: 2px dashed #CBD5E0;
+        overflow: hidden;
+        position: relative;
+        cursor: pointer;
+        transition: border-color 0.2s ease;
+    }
+
+    .profile-photo-wrapper:hover { border-color: #2BBFB3; }
+
+    .profile-photo-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+        display: block;
+    }
+
+    .profile-photo-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .profile-photo-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(13, 148, 136, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #FFFFFF;
+        opacity: 0;
+        border-radius: 50%;
+        transition: opacity 0.2s ease;
+    }
+
+    .profile-photo-wrapper:hover .profile-photo-overlay { opacity: 1; }
+
+    /* ── Misc ── */
+    .reg-hint     { font-size: 10px; color: #9CA3AF; margin: 0; }
+    .reg-error-text { font-size: 11px; color: #E11D48; margin: 3px 0 0 0; }
+
+    .reg-success-icon {
+        width: 52px;
+        height: 52px;
+        background-color: #D1FAF5;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .reg-footer-divider { border-top: 1px solid #F3F4F6; }
+
+    .reg-submit-btn {
+        background-color: #2BBFB3;
+        color: #FFFFFF;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 14px;
+        font-weight: 600;
+        transition: background-color 0.2s ease;
+    }
+
+    .reg-submit-btn:hover { background-color: #0D9488; color: #FFFFFF; }
+
+    /* ── Fade-in animation ── */
+    .animate-fade-in { animation: regFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+    @@keyframes regFadeIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Fixed toast error — always visible at bottom-center ── */
+    .lp-toast-error {
+        position: fixed;
+        bottom: 28px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999999;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background-color: #FFF0F2;
+        color: #C8102E;
+        border: 1px solid #FECDD5;
+        border-radius: 12px;
+        padding: 12px 18px 12px 16px;
+        font-size: 13.5px;
+        font-weight: 500;
+        box-shadow: 0 8px 28px rgba(200,16,46,0.18);
+        max-width: calc(100vw - 32px);
+        min-width: 260px;
+        animation: toastSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        white-space: nowrap;
+    }
+    @@keyframes toastSlideUp {
+        from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+        to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    .lp-toast-close {
+        background: transparent;
+        border: none;
+        color: #C8102E;
+        font-size: 13px;
+        cursor: pointer;
+        padding: 0 0 0 8px;
+        opacity: 0.7;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+    .lp-toast-close:hover { opacity: 1; }
+
+    /* ── Tablet (sm–md) ── */
+    @@media (min-width: 576px) {
+        .reg-card { padding: 24px; }
+        .reg-title { font-size: 1.25rem; }
+        .field-input { font-size: 14px !important; padding: 9px 12px !important; }
+        .field-label { font-size: 12px; }
+        .profile-photo-wrapper { width: 82px; height: 82px; }
+    }
+
+    /* ── Large screens ── */
+    @@media (min-width: 992px) {
+        .reg-card { padding: 28px; }
+        .reg-scroll-area > .container-fluid { align-items: center; }
+    }
+
+    @@media (max-width: 359px) {
+        .reg-card { padding: 14px 12px; }
+        .reg-title { font-size: 1rem; }
+        .field-input { font-size: 12px !important; padding: 7px 8px !important; }
+    }
+</style>

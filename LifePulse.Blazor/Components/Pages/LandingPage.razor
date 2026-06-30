@@ -1,0 +1,1130 @@
+﻿@page "/landing"
+@inject LifePulse.Blazor.CustomAuthStateProvider StateProvider
+@layout LandingLayout
+@inject NavigationManager Nav
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@using LifePulse.Shared
+@inject HttpClient Http
+
+<PageTitle>LifePulse HMS — Advanced Hospital Management System</PageTitle>
+
+<!-- ======================== NAVBAR ======================== -->
+<nav id="lp-navbar" class="lp-navbar navbar navbar-expand-lg fixed-top">
+    <div class="container">
+        <a class="navbar-brand lp-brand d-flex align-items-center gap-2" href="/landing">
+            <div class="lp-logo-wrap">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQvEnYxOaghA2UPK-hYtD41jhYAuU2nrrKpg&s" alt="LifePulse Logo" />
+            </div>
+            <span>LifePulse <span class="lp-hms-badge">HMS</span></span>
+        </a>
+
+        <button class="navbar-toggler lp-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#lpNav" aria-controls="lpNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="lp-toggler-icon"></span>
+            <span class="lp-toggler-icon"></span>
+            <span class="lp-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="lpNav">
+            <ul class="navbar-nav mx-auto gap-1">
+                <li class="nav-item">
+                    <a class="nav-link lp-nav-link" href="#home" @onclick='() => ScrollTo("home")' @onclick:preventDefault>Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link lp-nav-link" href="#services" @onclick='() => ScrollTo("services")' @onclick:preventDefault>Services</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link lp-nav-link" href="#doctors" @onclick='() => ScrollTo("doctors")' @onclick:preventDefault>Our Doctors</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link lp-nav-link" href="#about" @onclick='() => ScrollTo("about")' @onclick:preventDefault>About</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link lp-nav-link" href="#contact" @onclick='() => ScrollTo("contact")' @onclick:preventDefault>Contact</a>
+                </li>
+            </ul>
+            <div class="d-flex align-items-center gap-2 mt-3 mt-lg-0">
+                @if (StateProvider.IsAuthenticated)
+                {
+                    <span style="font-size:13px; color:#2BBFB3; font-weight:600;">
+                        <i class="bi bi-person-check-fill me-1"></i>@StateProvider.FullName
+                    </span>
+                    <button class="btn lp-btn-primary" @onclick="GoToMyPortal">
+                        My Portal
+                    </button>
+                    <button class="btn lp-btn-outline" @onclick="HandleLogout">
+                        Sign Out
+                    </button>
+                }
+                else
+                {
+                    <button class="btn lp-btn-outline" @onclick='() => Nav.NavigateTo("/login")'>
+                        Sign In
+                    </button>
+                    <button class="btn lp-btn-primary" @onclick='() => Nav.NavigateTo("/patient/register")'>
+                        Sign Up
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- ======================== HERO / BANNER ======================== -->
+<section id="home" class="lp-hero d-flex align-items-center">
+    <div class="lp-hero-overlay"></div>
+    <div class="lp-hero-grid-bg"></div>
+    <div class="container position-relative z-1">
+        <div class="row align-items-center">
+            <div class="col-12 col-lg-7 lp-hero-content">
+                <div class="lp-pill-badge mb-3">
+                    <span class="lp-pulse-dot"></span>
+                    Advanced Clinical Management
+                </div>
+                <h1 class="lp-hero-title">
+                    Healthcare<br/>
+                    <span class="lp-teal-text">Reimagined</span><br/>
+                    for the Modern Era
+                </h1>
+                <p class="lp-hero-sub">
+                    LifePulse HMS unifies patient records, appointments, billing, and clinical workflows
+                    into one seamless platform — empowering doctors, staff, and patients alike.
+                </p>
+                <div class="d-flex flex-wrap gap-3 mt-4">
+                    <button class="btn lp-btn-primary lp-btn-lg" @onclick='() => Nav.NavigateTo("/patient/register")'>
+                        <i class="bi bi-person-plus-fill me-2"></i>Get Started Free
+                    </button>
+                    <button class="btn lp-btn-ghost lp-btn-lg" @onclick='() => ScrollTo("about")'>
+                        <i class="bi bi-play-circle me-2"></i>Learn More
+                    </button>
+                </div>
+                <div class="lp-hero-stats d-flex flex-wrap gap-4 mt-5">
+                    <div class="lp-stat">
+                        <span class="lp-stat-num">500+</span>
+                        <span class="lp-stat-label">Patients Served</span>
+                    </div>
+                    <div class="lp-stat-divider"></div>
+                    <div class="lp-stat">
+                        <span class="lp-stat-num">50+</span>
+                        <span class="lp-stat-label">Specialist Doctors</span>
+                    </div>
+                    <div class="lp-stat-divider"></div>
+                    <div class="lp-stat">
+                        <span class="lp-stat-num">12</span>
+                        <span class="lp-stat-label">Departments</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-5 d-none d-lg-flex justify-content-end">
+                <div class="lp-hero-card-stack">
+                    <div class="lp-float-card lp-card-1">
+                        <div class="lp-float-icon"><i class="bi bi-heart-pulse-fill"></i></div>
+                        <div>
+                            <div class="lp-float-title">Patient Monitoring</div>
+                            <div class="lp-float-sub">Real-time vitals tracking</div>
+                        </div>
+                    </div>
+                    <div class="lp-float-card lp-card-2">
+                        <div class="lp-float-icon lp-icon-yellow"><i class="bi bi-calendar-check-fill"></i></div>
+                        <div>
+                            <div class="lp-float-title">Smart Scheduling</div>
+                            <div class="lp-float-sub">Zero appointment conflicts</div>
+                        </div>
+                    </div>
+                    <div class="lp-float-card lp-card-3">
+                        <div class="lp-float-icon lp-icon-red"><i class="bi bi-shield-check"></i></div>
+                        <div>
+                            <div class="lp-float-title">Secure Records</div>
+                            <div class="lp-float-sub">HIPAA-compliant storage</div>
+                        </div>
+                    </div>
+                    <div class="lp-hero-img-wrap">
+                        <img src="https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=400&auto=format&fit=crop" alt="Hospital" />
+                        <div class="lp-img-glow"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="lp-hero-wave">
+        <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+            <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="#F8F9FA"/>
+        </svg>
+    </div>
+</section>
+
+<!-- ======================== SERVICES ======================== -->
+<section id="services" class="lp-section lp-section-light">
+    <div class="container">
+        <div class="lp-section-header text-center mb-5">
+            <div class="lp-section-tag">Our Platform</div>
+            <h2 class="lp-section-title">Everything Your Hospital Needs</h2>
+            <p class="lp-section-sub">A complete suite of tools built for modern clinical environments</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="lp-service-card" @onclick='() => NavigateService("patient-management")' style="cursor:pointer;">
+                    <div class="lp-service-icon">
+                        <i class="bi bi-person-vcard-fill"></i>
+                    </div>
+                    <h5 class="lp-service-title">Patient Management</h5>
+                    <p class="lp-service-text">Full patient profiles with medical history, prescriptions, diagnostics, and billing — all in one place.</p>
+                    <div class="lp-service-arrow"><i class="bi bi-arrow-right"></i></div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="lp-service-card" @onclick='() => NavigateService("appointments")' style="cursor:pointer;">
+                    <div class="lp-service-icon lp-icon-blue">
+                        <i class="bi bi-calendar2-week-fill"></i>
+                    </div>
+                    <h5 class="lp-service-title">Appointment Scheduling</h5>
+                    <p class="lp-service-text">Intelligent scheduling system that prevents conflicts and sends automated reminders to patients and doctors.</p>
+                    <div class="lp-service-arrow"><i class="bi bi-arrow-right"></i></div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="lp-service-card" @onclick='() => NavigateService("billing")' style="cursor:pointer;">
+                    <div class="lp-service-icon lp-icon-green">
+                        <i class="bi bi-receipt-cutoff"></i>
+                    </div>
+                    <h5 class="lp-service-title">Billing & Invoicing</h5>
+                    <p class="lp-service-text">Automated billing with detailed invoices, insurance claims processing, and transparent payment tracking.</p>
+                    <div class="lp-service-arrow"><i class="bi bi-arrow-right"></i></div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="lp-service-card" @onclick='() => NavigateService("prescriptions")' style="cursor:pointer;">
+                    <div class="lp-service-icon lp-icon-purple">
+                        <i class="bi bi-capsule-pill"></i>
+                    </div>
+                    <h5 class="lp-service-title">Prescriptions</h5>
+                    <p class="lp-service-text">Digital prescription management with drug interaction checks and pharmacy integration support.</p>
+                    <div class="lp-service-arrow"><i class="bi bi-arrow-right"></i></div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="lp-service-card" @onclick='() => NavigateService("admin-dashboard")' style="cursor:pointer;">
+                    <div class="lp-service-icon lp-icon-orange">
+                        <i class="bi bi-bar-chart-line-fill"></i>
+                    </div>
+                    <h5 class="lp-service-title">Admin Dashboard</h5>
+                    <p class="lp-service-text">Real-time analytics on department load, doctor availability, and patient flow for informed decision-making.</p>
+                    <div class="lp-service-arrow"><i class="bi bi-arrow-right"></i></div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="lp-service-card lp-service-card-cta" @onclick="OpenMedibot" style="cursor:pointer;">
+                    <div class="lp-service-icon lp-icon-white">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <h5 class="lp-service-title lp-text-white">MediBot AI Assistant</h5>
+                    <p class="lp-service-text lp-text-white-muted">Ask our AI about doctors, departments, working hours, consultation fees, and appointment availability — powered by live hospital data.</p>
+                    <div class="lp-coming-soon-badge" style="background:rgba(255,255,255,0.3);">✨ Live Now</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ======================== DOCTORS SECTION ======================== -->
+<section id="doctors" class="lp-section lp-section-light" style="background: #F0FDFB;">
+    <div class="container">
+        <div class="lp-section-header text-center mb-5">
+            <div class="lp-section-tag">Meet Our Team</div>
+            <h2 class="lp-section-title">Our Specialist Doctors</h2>
+            <p class="lp-section-sub">Experienced professionals dedicated to your health and well-being</p>
+        </div>
+
+        @if (landingDoctors == null)
+        {
+            <!-- Loading skeleton -->
+            <div class="row g-4">
+                @for (int i = 0; i < 6; i++)
+                {
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="lp-doc-card lp-doc-card-skeleton">
+                            <div class="lp-skel lp-skel-avatar"></div>
+                            <div class="lp-skel lp-skel-line lp-skel-lg mt-3"></div>
+                            <div class="lp-skel lp-skel-line lp-skel-sm mt-2"></div>
+                            <div class="lp-skel lp-skel-line mt-2"></div>
+                            <div class="lp-skel lp-skel-btn mt-3"></div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else if (!landingDoctors.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-person-x" style="font-size: 48px; color: #D1D5DB;"></i>
+                <p style="color: #6B7280; font-size: 15px; margin-top: 12px;">No doctors available at the moment.</p>
+            </div>
+        }
+        else
+        {
+            <!-- Doctor search/filter row -->
+            <div class="row g-2 mb-4 justify-content-center">
+                <div class="col-12 col-md-5">
+                    <div style="position: relative;">
+                        <i class="bi bi-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #9CA3AF; font-size: 14px;"></i>
+                        <input type="text" class="form-control" placeholder="Search by name or specialization..."
+                               style="background-color:#FFFFFF; border:1px solid #E6EAF0; border-radius:10px; padding:10px 14px 10px 38px; font-size:14px; color:#1A1A2E;"
+                               @bind="doctorSearch" @bind:event="oninput" />
+                    </div>
+                </div>
+                <div class="col-12 col-md-3">
+                    <select class="form-select"
+                            style="background-color:#FFFFFF; border:1px solid #E6EAF0; border-radius:10px; padding:10px 14px; font-size:14px; color:#1A1A2E;"
+                            @bind="doctorDeptFilter">
+                        <option value="">All Departments</option>
+                        @foreach (var dept in landingDoctors.Select(d => d.DepartmentName).Distinct().OrderBy(x => x))
+                        {
+                            <option value="@dept">@dept</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                @foreach (var doc in FilteredLandingDoctors)
+                {
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="lp-doc-card">
+                            <!-- Availability badge -->
+                            <div style="position: absolute; top: 14px; right: 14px;">
+                                <span style="font-size: 11px; font-weight: 600; background-color: #D1FAF5; color: #0D9488; padding: 3px 10px; border-radius: 20px;">
+                                    <span style="width: 6px; height: 6px; border-radius: 50%; background-color: #0D9488; display: inline-block; margin-right: 4px;"></span>
+                                    Available
+                                </span>
+                            </div>
+
+                            <!-- Doctor avatar + name -->
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <img src="@(string.IsNullOrWhiteSpace(doc.ProfilePictureUrl) ? "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=256&h=256&q=80" : doc.ProfilePictureUrl)"
+                                     alt="Dr. @doc.FirstName @doc.LastName"
+                                     style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid #E0F7F5; flex-shrink:0;" />
+                                <div style="min-width:0;">
+                                    <div style="font-size:15px; font-weight:700; color:#1A1A2E; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Dr. @doc.FirstName @doc.LastName</div>
+                                    <div style="font-size:12px; color:#2BBFB3; font-weight:600;">@doc.Specialization</div>
+                                </div>
+                            </div>
+
+                            <!-- Tags -->
+                            <div class="d-flex gap-2 mb-3 flex-wrap">
+                                <span class="lp-doc-tag"><i class="bi bi-building me-1"></i>@doc.DepartmentName</span>
+                                <span class="lp-doc-tag"><i class="bi bi-briefcase me-1"></i>@doc.WorkType</span>
+                            </div>
+
+                            <!-- Schedule -->
+                            <div class="d-flex align-items-center gap-2 mb-2" style="font-size:12px; color:#6B7280;">
+                                <i class="bi bi-clock" style="color:#2BBFB3;"></i>
+                                @doc.WorkStartTime – @doc.WorkEndTime
+                            </div>
+                            <div class="mb-3" style="font-size:12px; color:#6B7280;">
+                                <i class="bi bi-calendar3 me-1" style="color:#2BBFB3;"></i>
+                                @GetShortSchedule(doc.ScheduleDays)
+                            </div>
+
+                            <!-- Consultation fee -->
+                            <div class="d-flex align-items-center gap-1 mb-4"
+                                 style="background-color:#FEF9C3; border-radius:8px; padding:6px 12px; display:inline-flex !important; width:fit-content;">
+                                <i class="bi bi-currency-dollar" style="color:#854D0E; font-size:14px;"></i>
+                                <span style="font-size:13px; font-weight:700; color:#854D0E;">@doc.ConsultationFee.ToString("0.00")</span>
+                                <span style="font-size:11px; color:#92400E; margin-left:2px;">consultation fee</span>
+                            </div>
+
+                            <!-- Book Appointment button -->
+                            <button class="lp-doc-book-btn w-100" @onclick="() => HandleBookAppointmentClick()">
+                                <i class="bi bi-calendar-plus me-2"></i>Book Appointment
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (!FilteredLandingDoctors.Any())
+            {
+                <div class="text-center py-4">
+                    <i class="bi bi-search" style="font-size: 36px; color: #D1D5DB;"></i>
+                    <p style="color: #6B7280; font-size: 15px; margin-top: 10px;">No doctors match your search.</p>
+                </div>
+            }
+        }
+    </div>
+</section>
+
+<!-- ======================== ABOUT ======================== -->
+<section id="about" class="lp-section lp-section-dark">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-12 col-lg-6">
+                <div class="lp-about-visual">
+                    <div class="lp-about-img-bg"></div>
+                    <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=500&auto=format&fit=crop"
+                         alt="Medical Team" class="lp-about-img" />
+                    <div class="lp-about-badge">
+                        <i class="bi bi-award-fill me-2" style="color:#2BBFB3;"></i>
+                        <span>Trusted by Medical Professionals</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="lp-section-tag">Who We Are</div>
+                <h2 class="lp-section-title lp-title-white">Built by Developers<br/>Who Understand Healthcare</h2>
+                <p class="lp-about-text">
+                    LifePulse HMS was designed from the ground up to solve the real challenges of hospital administration.
+                    We combine modern software architecture with deep clinical workflow understanding to deliver a platform
+                    that is fast, reliable, and intuitive for every role.
+                </p>
+                <p class="lp-about-text">
+                    From administrators managing hundreds of patients to doctors reviewing prescriptions and patients
+                    checking their own health records — LifePulse puts the right information in the right hands.
+                </p>
+                <div class="row g-3 mt-2">
+                    <div class="col-6">
+                        <div class="lp-about-feat"><i class="bi bi-check-circle-fill me-2" style="color:#2BBFB3;"></i>Role-Based Access</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="lp-about-feat"><i class="bi bi-check-circle-fill me-2" style="color:#2BBFB3;"></i>Real-Time Updates</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="lp-about-feat"><i class="bi bi-check-circle-fill me-2" style="color:#2BBFB3;"></i>Secure & Encrypted</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="lp-about-feat"><i class="bi bi-check-circle-fill me-2" style="color:#2BBFB3;"></i>AI-Powered Insights</div>
+                    </div>
+                </div>
+                <button class="btn lp-btn-primary mt-4" @onclick='() => Nav.NavigateTo("/patient/register")'>
+                    Join LifePulse Today <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ======================== CONTACT ======================== -->
+<section id="contact" class="lp-section lp-section-light">
+    <div class="container">
+        <div class="lp-section-header text-center mb-5">
+            <div class="lp-section-tag">Get In Touch</div>
+            <h2 class="lp-section-title">We're Here to Help</h2>
+            <p class="lp-section-sub">Have questions about LifePulse HMS? Reach out and our team will respond within 24 hours.</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <div class="col-12 col-md-4">
+                <div class="lp-contact-card">
+                    <div class="lp-contact-icon"><i class="bi bi-geo-alt-fill"></i></div>
+                    <h6 class="lp-contact-title">Location</h6>
+                    <p class="lp-contact-text">Air University, PAF Complex<br/>E-9, Islamabad, Pakistan</p>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="lp-contact-card">
+                    <div class="lp-contact-icon lp-icon-blue"><i class="bi bi-envelope-fill"></i></div>
+                    <h6 class="lp-contact-title">Email Us</h6>
+                    <p class="lp-contact-text">support@lifepulse-hms.com<br/>admin@lifepulse-hms.com</p>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="lp-contact-card">
+                    <div class="lp-contact-icon lp-icon-green"><i class="bi bi-telephone-fill"></i></div>
+                    <h6 class="lp-contact-title">Call Us</h6>
+                    <p class="lp-contact-text">+92-51-9262-000<br/>Mon – Fri, 9am – 6pm</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ======================== FOOTER ======================== -->
+<footer class="lp-footer">
+    <div class="container">
+        <div class="row g-4 align-items-center">
+            <div class="col-12 col-md-5">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="lp-logo-wrap lp-logo-sm">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQvEnYxOaghA2UPK-hYtD41jhYAuU2nrrKpg&s" alt="LifePulse Logo" />
+                    </div>
+                    <span class="lp-footer-brand">LifePulse HMS</span>
+                </div>
+                <p class="lp-footer-text">Advanced Hospital Management System — Empowering healthcare through technology.</p>
+            </div>
+            <div class="col-12 col-md-3">
+                <p class="lp-footer-links-heading">Quick Links</p>
+                <ul class="lp-footer-links">
+                    <li><a href="#home" @onclick='() => ScrollTo("home")' @onclick:preventDefault>Home</a></li>
+                    <li><a href="#services" @onclick='() => ScrollTo("services")' @onclick:preventDefault>Services</a></li>
+                    <li><a href="#doctors" @onclick='() => ScrollTo("doctors")' @onclick:preventDefault>Our Doctors</a></li>
+                    <li><a href="#about" @onclick='() => ScrollTo("about")' @onclick:preventDefault>About</a></li>
+                    <li><a href="#contact" @onclick='() => ScrollTo("contact")' @onclick:preventDefault>Contact</a></li>
+                </ul>
+            </div>
+            <div class="col-12 col-md-4 text-md-end">
+                <p class="lp-footer-links-heading">Portal Access</p>
+                <div class="d-flex gap-2 justify-content-md-end flex-wrap">
+                    <button class="btn lp-btn-outline lp-btn-sm" @onclick='() => Nav.NavigateTo("/login")'>Staff Login</button>
+                    <button class="btn lp-btn-primary lp-btn-sm" @onclick='() => Nav.NavigateTo("/patient/register")'>Patient Sign Up</button>
+                </div>
+            </div>
+        </div>
+        <hr class="lp-footer-hr" />
+        <div class="text-center lp-footer-copy">
+            &copy; @DateTime.Now.Year LifePulse HMS. Built with ❤️ by the LifePulse Team.
+        </div>
+    </div>
+</footer>
+
+<!-- ======================== CHATBOT BUTTON ======================== -->
+<div class="lp-chatbot-btn @(chatOpen ? "lp-chatbot-active" : "")" @onclick="ToggleChat">
+    @if (chatOpen)
+    {
+        <i class="bi bi-x-lg"></i>
+    }
+    else
+    {
+        <i class="bi bi-robot"></i>
+        <span class="lp-chat-ping"></span>
+    }
+</div>
+
+@if (chatOpen)
+{
+    <div class="lp-chat-panel">
+        <!-- Header -->
+        <div class="lp-chat-header">
+            <div class="d-flex align-items-center gap-2">
+                <div class="lp-chat-avatar"><i class="bi bi-robot"></i></div>
+                <div>
+                    <div class="lp-chat-title">MediBot</div>
+                    <div class="lp-chat-status">
+                        <span class="lp-pulse-dot lp-dot-sm"></span>
+                        @(isBotTyping ? "Typing..." : "Online")
+                    </div>
+                </div>
+            </div>
+            <button class="lp-chat-close" @onclick="ToggleChat"><i class="bi bi-x-lg"></i></button>
+        </div>
+
+        <!-- Messages -->
+        <div class="lp-chat-body" id="lp-chat-body">
+            <!-- Welcome message (always shown) -->
+            <div class="lp-chat-msg lp-bot-msg">
+                <div class="lp-msg-bubble lp-msg-bot">
+                    @if (StateProvider.IsAuthenticated && StateProvider.Role == "Patient")
+                    {
+                        @:👋 Hi <strong>@StateProvider.FullName</strong>! I'm <strong>MediBot</strong>.<br/>
+                        @:I can answer questions about our hospital <em>and book appointments for you</em>. Just ask!
+                    }
+                    else
+                    {
+                        @:👋 Hi! I'm <strong>MediBot</strong>, LifePulse's AI assistant.<br/>
+                        @:Ask me about our doctors, departments, and working hours.<br/>
+                        @:To book an appointment, please <a href="/login" style="color:#2BBFB3;font-weight:600;">sign in</a> first.
+                    }
+                </div>
+            </div>
+
+            <!-- Conversation history -->
+            @foreach (var msg in chatMessages)
+            {
+                @if (msg.IsUser)
+                {
+                    <div class="lp-chat-msg lp-user-msg">
+                        <div class="lp-msg-bubble lp-msg-user">@msg.Text</div>
+                    </div>
+                }
+                else
+                {
+                    <div class="lp-chat-msg lp-bot-msg">
+                        @if (!string.IsNullOrWhiteSpace(msg.Text))
+                        {
+                            <div class="lp-msg-bubble lp-msg-bot">@((MarkupString)FormatBotMessage(msg.Text))</div>
+                        }
+                        @if (msg.Booking != null)
+                        {
+                            @if (msg.Booking.Success)
+                            {
+                                <!-- Booking success card -->
+                                <div class="lp-booking-card lp-booking-success">
+                                    <div class="lp-booking-icon">✅</div>
+                                    <div>
+                                        <div style="font-weight:700;font-size:13px;color:#065F46;">Appointment Confirmed!</div>
+                                        <div style="font-size:12px;color:#047857;margin-top:2px;">@msg.Booking.DoctorName</div>
+                                        <div style="font-size:12px;color:#047857;">@msg.Booking.AppointmentDate?.ToString("dddd, dd MMM yyyy · HH:mm")</div>
+                                        <a href="/patient/appointments" style="font-size:12px;color:#2BBFB3;font-weight:600;text-decoration:none;">View in My Appointments →</a>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- Booking failure card -->
+                                <div class="lp-booking-card lp-booking-fail">
+                                    <div class="lp-booking-icon">⚠️</div>
+                                    <div style="font-size:13px;color:#991B1B;">@msg.Booking.Message</div>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            }
+
+            <!-- Typing indicator -->
+            @if (isBotTyping)
+            {
+                <div class="lp-chat-msg lp-bot-msg">
+                    <div class="lp-typing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            }
+
+            <!-- Error message -->
+            @if (!string.IsNullOrWhiteSpace(chatError))
+            {
+                <div class="lp-chat-msg lp-bot-msg">
+                    <div class="lp-msg-bubble lp-msg-error">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>@chatError
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Input footer -->
+        <div class="lp-chat-footer">
+            <input type="text"
+                   class="lp-chat-input"
+                   placeholder="Ask about doctors, departments..."
+                   @bind="chatInput"
+                   @bind:event="oninput"
+                   @onkeydown="HandleChatKeyDown"
+                   disabled="@isBotTyping"
+                   maxlength="300" />
+            <button class="lp-chat-send @(isBotTyping || string.IsNullOrWhiteSpace(chatInput) ? "lp-send-disabled" : "")"
+                    @onclick="SendChatMessage"
+                    disabled="@(isBotTyping || string.IsNullOrWhiteSpace(chatInput))">
+                <i class="bi bi-send-fill"></i>
+            </button>
+        </div>
+    </div>
+}
+
+<!-- ======================== STYLES ======================== -->
+<style>
+    :root {
+        --lp-teal: #2BBFB3;
+        --lp-teal-dark: #1fa89d;
+        --lp-teal-light: #E0F7F5;
+        --lp-navy: #1A1A2E;
+        --lp-navy-mid: #16213E;
+        --lp-muted: #6B7280;
+        --lp-bg: #F8F9FA;
+        --lp-white: #FFFFFF;
+        --lp-border: #E5E7EB;
+        --lp-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        --lp-radius: 14px;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { background-color: var(--lp-bg) !important; }
+    .lp-navbar { background: rgba(255,255,255,0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid var(--lp-border); padding: 12px 0; transition: box-shadow 0.3s ease; }
+    .lp-navbar.lp-scrolled { box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
+    .lp-brand { font-size: 20px; font-weight: 800; color: var(--lp-navy) !important; text-decoration: none; letter-spacing: -0.5px; }
+    .lp-hms-badge { font-size: 11px; font-weight: 700; background: var(--lp-teal-light); color: var(--lp-teal-dark); padding: 2px 7px; border-radius: 6px; vertical-align: middle; margin-left: 2px; }
+    .lp-logo-wrap { width: 36px; height: 36px; border-radius: 9px; overflow: hidden; border: 1.5px solid var(--lp-border); }
+    .lp-logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
+    .lp-logo-sm { width: 30px; height: 30px; border-radius: 7px; }
+    .lp-nav-link { font-size: 14px; font-weight: 600; color: var(--lp-muted) !important; padding: 8px 14px !important; border-radius: 8px; transition: all 0.2s ease; text-decoration: none; }
+    .lp-nav-link:hover, .lp-nav-link.active { color: var(--lp-teal) !important; background: var(--lp-teal-light); }
+    .lp-toggler { border: none; background: transparent; padding: 6px; display: flex; flex-direction: column; gap: 5px; }
+    .lp-toggler-icon { display: block; width: 22px; height: 2px; background: var(--lp-navy); border-radius: 2px; transition: all 0.2s; }
+    .lp-btn-primary { background: var(--lp-teal); color: #fff; border: none; border-radius: 10px; padding: 9px 22px; font-weight: 600; font-size: 14px; transition: all 0.2s ease; }
+    .lp-btn-primary:hover { background: var(--lp-teal-dark); color: #fff; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(43,191,179,0.35); }
+    .lp-btn-outline { background: transparent; border: 1.5px solid var(--lp-teal); color: var(--lp-teal); border-radius: 10px; padding: 8px 20px; font-weight: 600; font-size: 14px; transition: all 0.2s ease; }
+    .lp-btn-outline:hover { background: var(--lp-teal-light); color: var(--lp-teal-dark); border-color: var(--lp-teal-dark); }
+    .lp-btn-ghost { background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.4); color: #fff; border-radius: 10px; padding: 9px 22px; font-weight: 600; font-size: 14px; transition: all 0.2s ease; }
+    .lp-btn-ghost:hover { background: rgba(255,255,255,0.25); color: #fff; border-color: rgba(255,255,255,0.7); }
+    .lp-btn-lg { padding: 12px 28px; font-size: 15px; }
+    .lp-btn-sm { padding: 7px 16px; font-size: 13px; }
+    .lp-hero { position: relative; min-height: 100vh; padding-top: 90px; padding-bottom: 80px; background: linear-gradient(135deg, var(--lp-navy) 0%, var(--lp-navy-mid) 50%, #0F3460 100%); overflow: hidden; }
+    .lp-hero-overlay { position: absolute; inset: 0; background: radial-gradient(ellipse at 70% 50%, rgba(43,191,179,0.15) 0%, transparent 70%); pointer-events: none; }
+    .lp-hero-grid-bg { position: absolute; inset: 0; background-image: linear-gradient(rgba(43,191,179,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(43,191,179,0.05) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; }
+    .lp-hero-content { color: #fff; }
+    .lp-pill-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(43,191,179,0.18); border: 1px solid rgba(43,191,179,0.35); color: var(--lp-teal); border-radius: 30px; padding: 6px 16px; font-size: 13px; font-weight: 600; letter-spacing: 0.3px; }
+    .lp-pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lp-teal); display: inline-block; box-shadow: 0 0 0 0 rgba(43,191,179,0.5); animation: lp-pulse 1.8s infinite; }
+    .lp-dot-sm { width: 6px; height: 6px; }
+    @@keyframes lp-pulse { 0% { box-shadow: 0 0 0 0 rgba(43,191,179,0.6); } 70% { box-shadow: 0 0 0 8px rgba(43,191,179,0); } 100% { box-shadow: 0 0 0 0 rgba(43,191,179,0); } }
+    .lp-hero-title { font-size: clamp(36px, 6vw, 62px); font-weight: 800; line-height: 1.1; color: #fff; margin: 16px 0; letter-spacing: -1px; }
+    .lp-teal-text { color: var(--lp-teal); }
+    .lp-hero-sub { font-size: 16px; color: rgba(255,255,255,0.72); max-width: 520px; line-height: 1.7; margin: 0; }
+    .lp-hero-stats { border-top: 1px solid rgba(255,255,255,0.12); padding-top: 24px; }
+    .lp-stat-num { display: block; font-size: 28px; font-weight: 800; color: var(--lp-teal); letter-spacing: -0.5px; }
+    .lp-stat-label { display: block; font-size: 12px; color: rgba(255,255,255,0.55); font-weight: 500; }
+    .lp-stat-divider { width: 1px; background: rgba(255,255,255,0.15); align-self: stretch; }
+    .lp-hero-wave { position: absolute; bottom: -1px; left: 0; right: 0; }
+    .lp-hero-wave svg { width: 100%; height: 80px; display: block; }
+    .lp-hero-card-stack { position: relative; width: 340px; height: 380px; }
+    .lp-hero-img-wrap { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 220px; height: 280px; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+    .lp-hero-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .lp-img-glow { position: absolute; inset: 0; border-radius: 20px; background: linear-gradient(to bottom, transparent 50%, rgba(43,191,179,0.3) 100%); }
+    .lp-float-card { position: absolute; display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.96); border-radius: 14px; padding: 12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); min-width: 170px; z-index: 2; animation: lp-float 4s ease-in-out infinite; }
+    .lp-card-1 { top: 20px; left: -20px; animation-delay: 0s; }
+    .lp-card-2 { top: 50%; right: -30px; transform: translateY(-50%); animation-delay: 1.3s; }
+    .lp-card-3 { bottom: 20px; left: -10px; animation-delay: 0.7s; }
+    @@keyframes lp-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    .lp-card-2 { animation: lp-float2 4s ease-in-out infinite 1.3s; }
+    @@keyframes lp-float2 { 0%, 100% { transform: translateY(-50%); } 50% { transform: translateY(calc(-50% - 8px)); } }
+    .lp-float-icon { width: 36px; height: 36px; background: var(--lp-teal-light); color: var(--lp-teal); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .lp-icon-yellow { background: #FEF9C3; color: #854D0E; }
+    .lp-icon-red { background: #FEE2E2; color: #E11D48; }
+    .lp-icon-blue { background: #DBEAFE; color: #1D4ED8; }
+    .lp-icon-green { background: #DCFCE7; color: #16A34A; }
+    .lp-icon-purple { background: #F3E8FF; color: #7C3AED; }
+    .lp-icon-orange { background: #FEF3C7; color: #D97706; }
+    .lp-icon-white { background: rgba(255,255,255,0.2); color: #fff; }
+    .lp-float-title { font-size: 12px; font-weight: 700; color: var(--lp-navy); }
+    .lp-float-sub { font-size: 11px; color: var(--lp-muted); }
+    .lp-section { padding: 90px 0; }
+    .lp-section-light { background: var(--lp-bg); }
+    .lp-section-dark { background: linear-gradient(135deg, var(--lp-navy) 0%, var(--lp-navy-mid) 100%); color: #fff; }
+    .lp-section-tag { display: inline-block; font-size: 12px; font-weight: 700; color: var(--lp-teal); background: var(--lp-teal-light); border-radius: 20px; padding: 4px 14px; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 12px; }
+    .lp-section-title { font-size: clamp(26px, 4vw, 38px); font-weight: 800; color: var(--lp-navy); margin: 0 0 12px 0; letter-spacing: -0.5px; }
+    .lp-title-white { color: #fff !important; }
+    .lp-section-sub { font-size: 15px; color: var(--lp-muted); max-width: 520px; margin: 0 auto; }
+    .lp-service-card { background: var(--lp-white); border: 1px solid var(--lp-border); border-radius: var(--lp-radius); padding: 28px 24px; height: 100%; position: relative; overflow: hidden; transition: all 0.3s ease; }
+    .lp-service-card:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(43,191,179,0.15); border-color: var(--lp-teal); }
+    .lp-service-card-cta { background: linear-gradient(135deg, var(--lp-teal) 0%, #1fa89d 100%); border: none; }
+    .lp-service-icon { width: 48px; height: 48px; background: var(--lp-teal-light); color: var(--lp-teal); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px; }
+    .lp-service-title { font-size: 16px; font-weight: 700; color: var(--lp-navy); margin: 0 0 10px 0; }
+    .lp-service-text { font-size: 13.5px; color: var(--lp-muted); line-height: 1.65; margin: 0; }
+    .lp-text-white { color: #fff !important; }
+    .lp-text-white-muted { color: rgba(255,255,255,0.8) !important; }
+    .lp-service-arrow { position: absolute; bottom: 20px; right: 20px; width: 32px; height: 32px; background: var(--lp-teal-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--lp-teal); font-size: 14px; opacity: 0; transition: opacity 0.2s ease; }
+    .lp-service-card:hover .lp-service-arrow { opacity: 1; }
+    .lp-coming-soon-badge { display: inline-block; margin-top: 12px; background: rgba(255,255,255,0.25); color: #fff; font-size: 11px; font-weight: 700; border-radius: 20px; padding: 4px 14px; letter-spacing: 0.5px; }
+    /* ── Doctor Cards ── */
+    .lp-doc-card { background: var(--lp-white); border: 1px solid var(--lp-border); border-radius: var(--lp-radius); padding: 24px 20px; height: 100%; position: relative; transition: all 0.3s ease; }
+    .lp-doc-card:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(43,191,179,0.15); border-color: var(--lp-teal); }
+    .lp-doc-tag { font-size: 11px; font-weight: 600; background: #F3F4F6; color: #6B7280; padding: 3px 10px; border-radius: 20px; display: inline-flex; align-items: center; }
+    .lp-doc-book-btn { background: var(--lp-teal); color: #fff; border: none; border-radius: 10px; padding: 10px 18px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
+    .lp-doc-book-btn:hover { background: var(--lp-teal-dark); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(43,191,179,0.35); }
+    /* Doctor card skeleton */
+    .lp-doc-card-skeleton { pointer-events: none; }
+    .lp-skel { background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%); background-size: 200% 100%; animation: lp-shimmer 1.4s infinite; border-radius: 8px; }
+    @@keyframes lp-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .lp-skel-avatar { width: 60px; height: 60px; border-radius: 50%; }
+    .lp-skel-line { height: 14px; width: 80%; }
+    .lp-skel-lg { width: 60%; height: 16px; }
+    .lp-skel-sm { width: 40%; height: 12px; }
+    .lp-skel-btn { height: 38px; width: 100%; border-radius: 10px; }
+    /* About */
+    .lp-about-visual { position: relative; display: inline-block; width: 100%; }
+    .lp-about-img-bg { position: absolute; top: 20px; left: 20px; right: -20px; bottom: -20px; background: rgba(43,191,179,0.12); border-radius: 20px; border: 1px solid rgba(43,191,179,0.25); }
+    .lp-about-img { position: relative; width: 100%; height: 380px; object-fit: cover; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+    .lp-about-badge { position: absolute; bottom: -12px; right: -10px; background: #fff; border-radius: 12px; padding: 10px 18px; font-size: 13px; font-weight: 600; color: var(--lp-navy); box-shadow: 0 8px 24px rgba(0,0,0,0.15); display: flex; align-items: center; }
+    .lp-about-text { color: rgba(255,255,255,0.78); font-size: 15px; line-height: 1.75; margin-bottom: 12px; }
+    .lp-about-feat { font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.9); padding: 8px 12px; background: rgba(255,255,255,0.07); border-radius: 8px; }
+    .lp-contact-card { background: var(--lp-white); border: 1px solid var(--lp-border); border-radius: var(--lp-radius); padding: 28px 24px; text-align: center; transition: all 0.3s ease; }
+    .lp-contact-card:hover { box-shadow: 0 12px 30px rgba(43,191,179,0.15); border-color: var(--lp-teal); transform: translateY(-4px); }
+    .lp-contact-icon { width: 52px; height: 52px; background: var(--lp-teal-light); color: var(--lp-teal); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin: 0 auto 16px; }
+    .lp-contact-title { font-weight: 700; color: var(--lp-navy); margin-bottom: 6px; }
+    .lp-contact-text { font-size: 14px; color: var(--lp-muted); margin: 0; line-height: 1.6; }
+    .lp-footer { background: var(--lp-navy); padding: 48px 0 24px; }
+    .lp-footer-brand { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -0.3px; }
+    .lp-footer-text { font-size: 13.5px; color: rgba(255,255,255,0.5); max-width: 320px; line-height: 1.6; margin: 0; }
+    .lp-footer-links-heading { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+    .lp-footer-links { list-style: none; padding: 0; margin: 0; }
+    .lp-footer-links li { margin-bottom: 8px; }
+    .lp-footer-links a { font-size: 14px; color: rgba(255,255,255,0.6); text-decoration: none; transition: color 0.2s; }
+    .lp-footer-links a:hover { color: var(--lp-teal); }
+    .lp-footer-hr { border-color: rgba(255,255,255,0.1); margin: 32px 0 16px; }
+    .lp-footer-copy { font-size: 13px; color: rgba(255,255,255,0.35); }
+    .lp-chatbot-btn { position: fixed; bottom: 28px; right: 28px; width: 58px; height: 58px; background: var(--lp-teal); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff; cursor: pointer; z-index: 1000; box-shadow: 0 8px 24px rgba(43,191,179,0.5); transition: all 0.3s ease; user-select: none; }
+    .lp-chatbot-btn:hover { transform: scale(1.08); box-shadow: 0 12px 30px rgba(43,191,179,0.6); }
+    .lp-chatbot-active { background: #E11D48; box-shadow: 0 8px 24px rgba(225,29,72,0.4); }
+    .lp-chat-ping { position: absolute; top: 10px; right: 10px; width: 10px; height: 10px; background: #FCD34D; border-radius: 50%; border: 2px solid #fff; animation: lp-ping 1.5s infinite; }
+    @@keyframes lp-ping { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.7; } }
+    .lp-chat-panel { position: fixed; bottom: 100px; right: 28px; width: 360px; background: #fff; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); z-index: 999; overflow: hidden; display: flex; flex-direction: column; max-height: 520px; animation: lp-chat-in 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+    @@keyframes lp-chat-in { from { opacity: 0; transform: translateY(20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .lp-chat-header { background: linear-gradient(135deg, var(--lp-navy), var(--lp-navy-mid)); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .lp-chat-avatar { width: 40px; height: 40px; background: rgba(43,191,179,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--lp-teal); }
+    .lp-chat-title { font-size: 15px; font-weight: 700; color: #fff; }
+    .lp-chat-status { font-size: 11px; color: rgba(255,255,255,0.55); display: flex; align-items: center; gap: 5px; }
+    .lp-chat-close { background: transparent; border: none; color: rgba(255,255,255,0.5); font-size: 14px; cursor: pointer; transition: color 0.2s; padding: 4px; }
+    .lp-chat-close:hover { color: #fff; }
+    .lp-chat-body { padding: 16px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+    .lp-chat-msg { display: flex; flex-direction: column; }
+    .lp-bot-msg { align-items: flex-start; }
+    .lp-user-msg { align-items: flex-end; }
+    .lp-msg-bubble { max-width: 88%; font-size: 13.5px; line-height: 1.6; padding: 10px 14px; border-radius: 16px; word-break: break-word; }
+    .lp-msg-bot { background: #F4F6F9; color: var(--lp-navy); border-radius: 4px 16px 16px 16px; }
+    .lp-msg-user { background: var(--lp-teal); color: #fff; border-radius: 16px 4px 16px 16px; }
+    .lp-msg-error { background: #FFF0F2; color: #C8102E; border-radius: 4px 16px 16px 16px; font-size: 13px; }
+    .lp-typing-indicator { display: flex; gap: 4px; padding: 10px 14px; background: #F4F6F9; border-radius: 4px 16px 16px 16px; width: fit-content; }
+    .lp-typing-indicator span { width: 7px; height: 7px; border-radius: 50%; background: #9CA3AF; animation: lp-typing 1.2s infinite; }
+    .lp-typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .lp-typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    @@keyframes lp-typing { 0%, 100% { transform: translateY(0); opacity: 0.5; } 50% { transform: translateY(-4px); opacity: 1; } }
+    .lp-chat-footer { padding: 12px 14px; border-top: 1px solid var(--lp-border); display: flex; gap: 8px; flex-shrink: 0; background: #fff; }
+    .lp-chat-input { flex: 1; border: 1.5px solid var(--lp-border); border-radius: 10px; padding: 9px 14px; font-size: 13px; background: #F9FAFB; color: #1A1A2E; outline: none; transition: border-color 0.2s; }
+    .lp-chat-input:focus { border-color: var(--lp-teal); background: #fff; }
+    .lp-chat-input:disabled { opacity: 0.6; cursor: not-allowed; }
+    .lp-chat-send { width: 38px; height: 38px; background: var(--lp-teal); border: none; border-radius: 10px; color: #fff; font-size: 14px; cursor: pointer; transition: all 0.2s; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .lp-chat-send:hover:not(:disabled) { background: var(--lp-teal-dark); transform: scale(1.05); }
+    .lp-send-disabled { opacity: 0.4; cursor: not-allowed; }
+    /* Booking confirmation cards */
+    .lp-booking-card { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; border-radius: 12px; margin-top: 6px; max-width: 90%; }
+    .lp-booking-success { background: #ECFDF5; border: 1px solid #A7F3D0; }
+    .lp-booking-fail { background: #FFF0F0; border: 1px solid #FECACA; }
+    .lp-booking-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    @@media (max-width: 767px) {
+        .lp-hero { padding-top: 80px; padding-bottom: 60px; }
+        .lp-section { padding: 60px 0; }
+        .lp-chat-panel { width: calc(100vw - 24px); right: 12px; bottom: 90px; max-height: 460px; }
+        .lp-chatbot-btn { bottom: 20px; right: 20px; width: 52px; height: 52px; font-size: 20px; }
+    }
+    .lp-chat-body::-webkit-scrollbar { width: 4px; }
+    .lp-chat-body::-webkit-scrollbar-track { background: transparent; }
+    .lp-chat-body::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 4px; }
+</style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+@code {
+    // ── Page state ─────────────────────────────────────────────────────────
+    private bool chatOpen = false;
+    private List<DoctorDto>? landingDoctors;
+    private string doctorSearch = "";
+    private string doctorDeptFilter = "";
+
+    // ── Chat state ──────────────────────────────────────────────────────────
+    private List<ChatMessage> chatMessages = new();
+    private string chatInput = "";
+    private bool isBotTyping = false;
+    private string chatError = "";
+
+    // Each entry is a plain { role, content } pair — matches what the API expects
+    // Plain class instead of record — avoids Razor parser treating () as expression
+    private class HistoryEntry
+    {
+        public string role    { get; init; }
+        public string content { get; init; }
+        public HistoryEntry(string r, string c) { role = r; content = c; }
+    }
+    private List<HistoryEntry> conversationHistory = new();
+
+    private class ChatMessage
+    {
+        public string                   Text    { get; init; }
+        public bool                     IsUser  { get; init; }
+        public AppointmentBookingResult? Booking { get; init; }
+        public ChatMessage(string text, bool isUser, AppointmentBookingResult? booking = null)
+        {
+            Text    = text;
+            IsUser  = isUser;
+            Booking = booking;
+        }
+    }
+
+    private IEnumerable<DoctorDto> FilteredLandingDoctors =>
+        landingDoctors?.Where(d =>
+            (string.IsNullOrWhiteSpace(doctorSearch) ||
+             $"{d.FirstName} {d.LastName} {d.Specialization}".Contains(doctorSearch, StringComparison.OrdinalIgnoreCase))
+            &&
+            (string.IsNullOrWhiteSpace(doctorDeptFilter) || d.DepartmentName == doctorDeptFilter)
+        ) ?? Enumerable.Empty<DoctorDto>();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await StateProvider.TryRestoreSessionAsync();
+            StateHasChanged();
+
+            _ = LoadDoctorsAsync();
+
+            await JS.InvokeVoidAsync("eval", @"
+                (function() {
+                    var navbar = document.getElementById('lp-navbar');
+                    if (!navbar) return;
+                    window.addEventListener('scroll', function() {
+                        if (window.scrollY > 20) navbar.classList.add('lp-scrolled');
+                        else navbar.classList.remove('lp-scrolled');
+                    });
+                    var navLinks = document.querySelectorAll('.lp-nav-link');
+                    var sections = ['home', 'services', 'doctors', 'about', 'contact'];
+                    window.addEventListener('scroll', function() {
+                        var scrollPos = window.scrollY + 100;
+                        sections.forEach(function(id) {
+                            var el = document.getElementById(id);
+                            if (!el) return;
+                            if (el.offsetTop <= scrollPos && el.offsetTop + el.offsetHeight > scrollPos) {
+                                navLinks.forEach(function(l) { l.classList.remove('active'); });
+                                var active = document.querySelector('.lp-nav-link[href=""#' + id + '""]');
+                                if (active) active.classList.add('active');
+                            }
+                        });
+                    });
+                })();
+            ");
+        }
+
+        // Auto-scroll chat to bottom whenever messages change
+        if (chatOpen && (chatMessages.Any() || isBotTyping))
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                (function() {
+                    var el = document.getElementById('lp-chat-body');
+                    if (el) el.scrollTop = el.scrollHeight;
+                })();
+            ");
+        }
+    }
+
+    private async Task LoadDoctorsAsync()
+    {
+        try
+        {
+            landingDoctors = await Http.GetFromJsonAsync<List<DoctorDto>>("api/Patient/available-doctors");
+        }
+        catch
+        {
+            landingDoctors = new List<DoctorDto>();
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string GetShortSchedule(string scheduleDays)
+    {
+        if (string.IsNullOrWhiteSpace(scheduleDays)) return "—";
+        var days = scheduleDays.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (days.Length == 0) return "—";
+        var shorts = days.Select(d => d.Length >= 3 ? d[..3] : d).ToList();
+        if (shorts.Count == 1) return shorts[0];
+        return $"{shorts.First()}–{shorts.Last()}";
+    }
+
+    private void HandleBookAppointmentClick()
+    {
+        if (StateProvider.IsAuthenticated && StateProvider.Role == "Patient")
+            Nav.NavigateTo("/patient/appointments");
+        else
+            Nav.NavigateTo("/login");
+    }
+
+    private void ToggleChat()
+    {
+        chatOpen = !chatOpen;
+        if (chatOpen)
+        {
+            chatError = "";
+            // Don't clear history on open — user may reopen mid-conversation
+        }
+    }
+
+    // ── Chat: handle Enter key ──────────────────────────────────────────────
+    private async Task HandleChatKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !isBotTyping && !string.IsNullOrWhiteSpace(chatInput))
+            await SendChatMessage();
+    }
+
+    // ── Chat: send a message ────────────────────────────────────────────────
+    private async Task SendChatMessage()
+    {
+        var question = chatInput.Trim();
+        if (string.IsNullOrWhiteSpace(question) || isBotTyping) return;
+
+        chatInput = "";
+        chatError = "";
+        chatMessages.Add(new ChatMessage(question, true));
+        isBotTyping = true;
+        StateHasChanged();
+
+        try
+        {
+            var payload = new
+            {
+                question,
+                patientId         = StateProvider.IsAuthenticated && StateProvider.Role == "Patient" ? StateProvider.UserId : 0,
+                patientName       = StateProvider.IsAuthenticated && StateProvider.Role == "Patient" ? StateProvider.FullName : "",
+                isPatientLoggedIn = StateProvider.IsAuthenticated && StateProvider.Role == "Patient",
+                history           = conversationHistory
+            };
+
+            var response = await Http.PostAsJsonAsync("api/Chatbot/ask", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ChatbotResponseDto>();
+                if (result != null)
+                {
+                    // Store both turns in history so the AI has full context next message
+                    conversationHistory.Add(new HistoryEntry("user",      question));
+                    conversationHistory.Add(new HistoryEntry("assistant", result.Answer ?? ""));
+
+                    // Cap history at 20 messages to avoid token limits
+                    if (conversationHistory.Count > 20)
+                        conversationHistory = conversationHistory
+                            .Skip(conversationHistory.Count - 20).ToList();
+
+                    if (!string.IsNullOrWhiteSpace(result.Answer))
+                        chatMessages.Add(new ChatMessage(result.Answer, false, result.BookingResult));
+                    else if (result.BookingResult != null)
+                        chatMessages.Add(new ChatMessage("", false, result.BookingResult));
+
+                    // Clear history after a successful booking so next booking starts fresh
+                    if (result.BookingResult?.Success == true)
+                        conversationHistory.Clear();
+                }
+            }
+            else
+            {
+                var errText = await response.Content.ReadAsStringAsync();
+                chatError = string.IsNullOrWhiteSpace(errText)
+                    ? "Something went wrong. Please try again."
+                    : errText.Length > 160 ? errText[..160] + "…" : errText;
+            }
+        }
+        catch (Exception ex)
+        {
+            chatError = "Could not reach the server: " + ex.Message;
+        }
+        finally
+        {
+            isBotTyping = false;
+            StateHasChanged();
+        }
+    }
+
+    // ── Format bot message: convert **bold**, bullet points, newlines to HTML ──
+    private static string FormatBotMessage(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return text;
+
+        // Escape HTML first
+        text = System.Net.WebUtility.HtmlEncode(text);
+
+        // Convert **text** → <strong>text</strong>
+        text = System.Text.RegularExpressions.Regex.Replace(
+            text, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+
+        // Convert *text* → <em>text</em>  (only single asterisks not already handled)
+        text = System.Text.RegularExpressions.Regex.Replace(
+            text, @"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", "<em>$1</em>");
+
+        // Convert bullet lines: "- item" or "• item" → proper list items
+        var lines = text.Split('\n');
+        var result = new System.Text.StringBuilder();
+        bool inList = false;
+        foreach (var line in lines)
+        {
+            var trimmed = line.TrimStart();
+            if (trimmed.StartsWith("- ") || trimmed.StartsWith("• "))
+            {
+                if (!inList) { result.Append("<ul style='margin:6px 0 6px 14px;padding:0;'>"); inList = true; }
+                result.Append($"<li style='margin-bottom:3px;'>{trimmed[2..]}</li>");
+            }
+            else
+            {
+                if (inList) { result.Append("</ul>"); inList = false; }
+                if (!string.IsNullOrWhiteSpace(trimmed))
+                    result.Append(trimmed + "<br/>");
+                else
+                    result.Append("<br/>");
+            }
+        }
+        if (inList) result.Append("</ul>");
+        return result.ToString().TrimEnd("<br/>".ToCharArray());
+    }
+
+    private void OpenMedibot()
+    {
+        chatOpen = true;
+        chatError = "";
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Routes service card clicks based on the logged-in role.
+    /// service: "patient-management" | "appointments" | "billing" | "prescriptions" | "admin-dashboard"
+    /// </summary>
+    private void NavigateService(string service)
+    {
+        var role = StateProvider.IsAuthenticated ? StateProvider.Role : "";
+
+        switch (service)
+        {
+            case "patient-management":
+                if      (role == "Patient") Nav.NavigateTo("/patient/dashboard");
+                else if (role == "Admin")   Nav.NavigateTo("/admin/patients");
+                else if (role == "Doctor")  Nav.NavigateTo("/doctor/portal");
+                else                        Nav.NavigateTo("/login");
+                break;
+
+            case "appointments":
+                if      (role == "Patient") Nav.NavigateTo("/patient/appointments");
+                else if (role == "Admin")   Nav.NavigateTo("/");          // admin dashboard shows appointments
+                else if (role == "Doctor")  Nav.NavigateTo("/doctor/portal");
+                else                        Nav.NavigateTo("/login");
+                break;
+
+            case "billing":
+                if      (role == "Patient") Nav.NavigateTo("/patient/billing");
+                else if (role == "Admin")   Nav.NavigateTo("/admin/checkouts");
+                else if (role == "Doctor")  Nav.NavigateTo("/doctor/portal");
+                else                        Nav.NavigateTo("/login");
+                break;
+
+            case "prescriptions":
+                if      (role == "Patient") Nav.NavigateTo("/patient/prescriptions");
+                else if (role == "Admin")   Nav.NavigateTo("/admin/patients");   // prescriptions live under patients in admin
+                else if (role == "Doctor")  Nav.NavigateTo("/doctor/portal");
+                else                        Nav.NavigateTo("/login");
+                break;
+
+            case "admin-dashboard":
+                if      (role == "Admin")   Nav.NavigateTo("/");
+                else                        Nav.NavigateTo("/login");   // patients and doctors → login
+                break;
+
+            default:
+                Nav.NavigateTo("/login");
+                break;
+        }
+    }
+
+    private void SmartNavigate(string defaultPath)
+    {
+        if (StateProvider.IsAuthenticated)
+            GoToMyPortal();
+        else
+            Nav.NavigateTo(defaultPath);
+    }
+
+    private void GoToMyPortal()
+    {
+        if (StateProvider.Role == "Admin")        Nav.NavigateTo("/");
+        else if (StateProvider.Role == "Doctor")  Nav.NavigateTo("/doctor/portal");
+        else if (StateProvider.Role == "Patient") Nav.NavigateTo("/patient/dashboard");
+    }
+
+    private void HandleLogout()
+    {
+        StateProvider.MarkUserAsLoggedOut();
+        Nav.NavigateTo("/landing", forceLoad: true);
+    }
+
+    private async Task ScrollTo(string sectionId)
+    {
+        await JS.InvokeVoidAsync("eval", $@"
+            (function() {{
+                var el = document.getElementById('{sectionId}');
+                if (el) {{
+                    var offset = 72;
+                    var top = el.getBoundingClientRect().top + window.pageYOffset - offset;
+                    window.scrollTo({{ top: top, behavior: 'smooth' }});
+                }}
+            }})();
+        ");
+    }
+}

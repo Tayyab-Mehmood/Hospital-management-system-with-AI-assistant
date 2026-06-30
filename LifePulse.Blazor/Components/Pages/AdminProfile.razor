@@ -1,0 +1,228 @@
+﻿@page "/admin/profile"
+@using LifePulse.Shared
+@inject HttpClient Http
+@inject NavigationManager Nav
+@inject LifePulse.Blazor.CustomAuthStateProvider StateProvider
+
+<PageTitle>Admin Profile | LifePulse</PageTitle>
+
+@if (!StateProvider.IsAuthenticated || StateProvider.Role != "Admin")
+{
+    <p style="color:#6B7280;text-align:center;padding-top:60px;">
+        Access denied. <a href="login" style="color:#2BBFB3;">Sign in</a>
+    </p>
+    return;
+}
+
+<div class="container-fluid px-2 px-md-4 pb-5">
+
+    <!-- Header -->
+    <div class="mb-4 d-flex align-items-center gap-3 flex-wrap">
+        <button class="btn btn-sm" style="background:#F4F6F9;border:none;border-radius:8px;color:#6B7280;padding:8px 14px;font-weight:600;"
+                @onclick='() => Nav.NavigateTo("/landing")'>
+            <i class="bi bi-arrow-left me-1"></i>Back to Site
+        </button>
+        <div>
+            <h1 style="font-size:clamp(20px,5vw,26px);font-weight:700;color:#1A1A2E;margin:0;">Admin Profile</h1>
+            <p style="font-size:14px;color:#6B7280;margin:2px 0 0 0;">Manage your administrator account credentials.</p>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    @if (!string.IsNullOrWhiteSpace(successMsg))
+    {
+        <div class="mb-4 p-3 d-flex align-items-center gap-2" style="background:#D1FAF5;color:#0D9488;border-radius:10px;font-size:14px;font-weight:500;">
+            <i class="bi bi-check-circle-fill" style="font-size:18px;"></i>@successMsg
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(errorMsg))
+    {
+        <div class="mb-4 p-3 d-flex align-items-center gap-2" style="background:#FFE4E6;color:#E11D48;border-radius:10px;font-size:14px;font-weight:500;">
+            <i class="bi bi-exclamation-triangle-fill" style="font-size:18px;"></i>@errorMsg
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5"><div class="spinner-border" style="color:#2BBFB3;" role="status"></div></div>
+    }
+    else
+    {
+        <div class="row g-4 justify-content-center">
+            <div class="col-12 col-md-8 col-lg-6">
+                <div style="background:#FFFFFF;border-radius:14px;padding:28px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+
+                    <!-- Avatar -->
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center fw-bold"
+                             style="width:72px;height:72px;background:#E0F7F5;color:#0D9488;border-radius:50%;font-size:26px;">
+                            @StateProvider.FullName.Substring(0, Math.Min(2, StateProvider.FullName.Length)).ToUpper()
+                        </div>
+                        <div style="font-size:17px;font-weight:700;color:#1A1A2E;margin-top:10px;">@StateProvider.FullName</div>
+                        <div style="font-size:12px;color:#6B7280;">System Administrator</div>
+                    </div>
+
+                    <hr style="border-color:#F3F4F6;margin:0 0 20px 0;" />
+
+                    <!-- Edit Form -->
+                    <div class="d-flex flex-column gap-3 text-dark">
+
+                        <div>
+                            <label class="field-label">Full Name</label>
+                            <input type="text" class="form-control lp-input"
+                                   placeholder="Display name" @bind="form.FullName" />
+                        </div>
+
+                        <div>
+                            <label class="field-label">Username</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0" style="border-radius:8px 0 0 8px;border-color:#E6EAF0;">
+                                    <i class="bi bi-person text-muted"></i>
+                                </span>
+                                <input type="text" class="form-control lp-input-right"
+                                       placeholder="Login username" @bind="form.Username" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="field-label">Email Address</label>
+                           <input type="email"
+       class="form-control lp-input"
+       placeholder="admin@lifepulse.com"
+       @bind="form.Email" />
+                        </div>
+
+                        <hr style="border-color:#F3F4F6;margin:4px 0;" />
+
+                        <div style="background:#F4F6F9;border-radius:10px;padding:16px;">
+                            <div style="font-size:12px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">
+                                <i class="bi bi-shield-lock me-1" style="color:#2BBFB3;"></i>Change Password
+                            </div>
+                            <div class="d-flex flex-column gap-2">
+                                <div>
+                                    <label class="field-label">New Password</label>
+                                    <input type="password" class="form-control lp-input"
+                                           placeholder="Leave blank to keep current password" @bind="newPassword" />
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(newPassword))
+                                {
+                                    <div>
+                                        <label class="field-label">Confirm New Password</label>
+                                        <input type="password" class="form-control lp-input"
+                                               placeholder="Re-enter new password" @bind="confirmPassword" />
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <button class="btn fw-semibold mt-2"
+                                style="background-color:#2BBFB3;color:#FFFFFF;border:none;border-radius:10px;padding:12px;"
+                                @onclick="SaveChanges" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="bi bi-check-circle-fill me-2"></i>Save Changes
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .field-label { font-size:12px;color:#6B7280;font-weight:600;margin-bottom:4px;display:block; }
+    .lp-input { background-color:#F9FAFB;border:1px solid #E6EAF0;border-radius:8px;padding:10px 14px; }
+    .lp-input:focus { border-color:#2BBFB3;box-shadow:0 0 0 3px rgba(43,191,179,0.12);outline:none; }
+    .lp-input-right { background-color:#F9FAFB;border:1px solid #E6EAF0;border-left:none;border-radius:0 8px 8px 0;padding:10px 14px; }
+    .lp-input-right:focus { border-color:#2BBFB3;box-shadow:none;outline:none; }
+</style>
+
+@code {
+    private bool isLoading = true;
+    private bool isSaving  = false;
+    private string successMsg = "";
+    private string errorMsg   = "";
+    private string newPassword     = "";
+    private string confirmPassword = "";
+
+    private AdminProfileUpdateDto form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var admin = await Http.GetFromJsonAsync<AdminUserDto>(
+                $"api/Admin/profile/{StateProvider.UserId}");
+            if (admin != null)
+            {
+                form.FullName = admin.FullName;
+                form.Username = admin.Username;
+                form.Email    = admin.Email;
+            }
+        }
+        catch { }
+        finally { isLoading = false; }
+    }
+
+    private async Task SaveChanges()
+    {
+        successMsg = "";
+        errorMsg   = "";
+
+        if (!string.IsNullOrWhiteSpace(form.Email))
+        {
+            var emailRegex = new System.Text.RegularExpressions.Regex(
+                @"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$");
+            if (!emailRegex.IsMatch(form.Email))
+            { errorMsg = "Please enter a valid email address (e.g. name@domain.com)."; return; }
+        }
+
+        if (!string.IsNullOrWhiteSpace(newPassword))
+        {
+            if (newPassword.Length < 6)
+            { errorMsg = "Password must be at least 6 characters."; return; }
+            if (newPassword != confirmPassword)
+            { errorMsg = "Passwords do not match."; return; }
+            form.NewPassword = newPassword;
+        }
+        else
+        {
+            form.NewPassword = null;
+        }
+
+        isSaving = true;
+        try
+        {
+            var response = await Http.PutAsJsonAsync(
+                $"api/Admin/profile/{StateProvider.UserId}", form);
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMsg = "Profile updated successfully!";
+                // Update display name in session
+                StateProvider.MarkUserAsAuthenticated(
+                    form.Username ?? StateProvider.Username,
+                    form.FullName ?? StateProvider.FullName,
+                    "Admin",
+                    StateProvider.UserId);
+                newPassword     = "";
+                confirmPassword = "";
+                form.NewPassword = null;
+            }
+            else
+            {
+                errorMsg = await response.Content.ReadAsStringAsync();
+                if (string.IsNullOrWhiteSpace(errorMsg))
+                    errorMsg = "Failed to save changes.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMsg = "Error: " + ex.Message;
+        }
+        finally { isSaving = false; }
+    }
+}

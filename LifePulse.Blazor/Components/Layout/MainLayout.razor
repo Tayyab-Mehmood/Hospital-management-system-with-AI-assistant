@@ -1,0 +1,129 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager Nav
+
+<div class="page-wrapper" style="min-height: 100vh; background-color: #F8F9FA;">
+
+    @* Mobile Top Bar *@
+    <div class="d-flex d-md-none align-items-center justify-content-between px-3"
+         style="height: 56px; background-color: #FFFFFF; border-bottom: 1px solid #E5E7EB; position: sticky; top: 0; z-index: 200;">
+        <div class="d-flex align-items-center gap-2">
+            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQvEnYxOaghA2UPK-hYtD41jhYAuU2nrrKpg&s"
+                 alt="LifePulse Logo" style="width: 28px; height: 28px; border-radius: 4px;" />
+            <span style="color: #1A1A2E; font-weight: 700; font-size: 16px;">LifePulse</span>
+        </div>
+        <button class="btn hamburger-btn"
+                @onclick="ToggleSidebar" aria-label="Toggle menu">
+            <i class="bi @(sidebarOpen ? "bi-x-lg" : "bi-list")"></i>
+        </button>
+    </div>
+
+    @* Overlay for mobile sidebar *@
+    @if (sidebarOpen)
+    {
+        <div class="d-md-none" style="position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 149;"
+             @onclick="CloseSidebar"></div>
+    }
+
+    <div class="d-flex" style="min-height: calc(100vh - 56px);">
+
+        @* Sidebar *@
+        <div class="sidebar-panel @(sidebarOpen ? "sidebar-open" : "")"
+             style="width: 240px; background-color: #FFFFFF; border-right: 1px solid #E5E7EB; flex-shrink: 0;">
+            @* Desktop Logo *@
+            <div class="d-none d-md-flex p-4 align-items-center gap-2">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQvEnYxOaghA2UPK-hYtD41jhYAuU2nrrKpg&s"
+                     alt="Logo" style="width: 30px; height: 30px; border-radius: 4px;" />
+                <h5 style="color: #1A1A2E; font-weight: 700; margin: 0;">LifePulse HMS</h5>
+            </div>
+            @* Mobile Logo inside sidebar *@
+            <div class="d-flex d-md-none p-3 align-items-center gap-2 border-bottom" style="border-color: #E5E7EB !important;">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQQvEnYxOaghA2UPK-hYtD41jhYAuU2nrrKpg&s"
+                     alt="Logo" style="width: 28px; height: 28px; border-radius: 4px;" />
+                <span style="color: #1A1A2E; font-weight: 700; font-size: 15px;">LifePulse HMS</span>
+            </div>
+            <NavMenu OnNavClick="CloseSidebar" />
+        </div>
+
+        @* Main Content *@
+        <main class="flex-grow-1 d-flex flex-column" style="min-width: 0; overflow-x: hidden;">
+            <header class="d-none d-md-flex px-4 align-items-center justify-content-between"
+                    style="height: 64px; background-color: #FFFFFF; border-bottom: 1px solid #E5E7EB; flex-shrink: 0;">
+                <span style="color: #6B7280; font-size: 14px;">LifePulse Clinical Portal</span>
+            </header>
+
+            <article class="content flex-grow-1 p-2 p-md-4" style="overflow-y: auto; overflow-x: hidden;">
+                @Body
+            </article>
+        </main>
+    </div>
+</div>
+
+<style>
+    /* Hamburger button — always visible against white topbar */
+    .hamburger-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: 1.5px solid #E5E7EB !important;
+        border-radius: 8px !important;
+        background: transparent !important;
+        color: #1A1A2E !important;
+        box-shadow: none !important;
+        transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .hamburger-btn:hover,
+    .hamburger-btn:focus,
+    .hamburger-btn:active {
+        background: #F4F6F9 !important;
+        border-color: #2BBFB3 !important;
+        color: #0D9488 !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    .hamburger-btn .bi {
+        font-size: 22px;
+        line-height: 1;
+        color: inherit;
+    }
+
+    /* Desktop sidebar always visible */
+    .sidebar-panel {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+    }
+
+    /* Mobile sidebar: hidden off-screen by default, slides in when open */
+    @@media (max-width: 767px) {
+        .sidebar-panel {
+            position: fixed;
+            top: 56px;
+            left: -260px;
+            height: calc(100vh - 56px);
+            z-index: 150;
+            transition: left 0.25s ease;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.12);
+        }
+        .sidebar-panel.sidebar-open {
+            left: 0;
+        }
+    }
+
+    /* Smooth content padding on very small screens */
+    @@media (max-width: 400px) {
+        .content { padding: 8px !important; }
+    }
+</style>
+
+@code {
+    private bool sidebarOpen = false;
+
+    private void ToggleSidebar() => sidebarOpen = !sidebarOpen;
+    private void CloseSidebar() => sidebarOpen = false;
+}

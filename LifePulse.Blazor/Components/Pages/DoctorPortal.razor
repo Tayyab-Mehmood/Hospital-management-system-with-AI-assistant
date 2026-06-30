@@ -1,0 +1,733 @@
+﻿@page "/doctor/portal"
+@using LifePulse.Shared
+@inject HttpClient Http
+@inject LifePulse.Blazor.CustomAuthStateProvider StateProvider
+@inject IJSRuntime JS
+
+<PageTitle>My Workspace | LifePulse</PageTitle>
+
+<div class="container-fluid px-2 px-md-4">
+
+    <!-- Workspace Header -->
+    <div class="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h1 style="font-size: clamp(20px,5vw,26px); font-weight: 700; color: #1A1A2E; margin: 0;">Clinical Workspace Desk</h1>
+            <p style="font-size: 14px; color: #6B7280; margin: 2px 0 0 0;">
+                Welcome back, <strong>@StateProvider.FullName</strong>. Managing your daily patient records.
+            </p>
+        </div>
+        <div class="d-flex gap-2 p-1 bg-white border rounded" style="border-radius: 10px; flex-shrink: 0;">
+            <button class="btn btn-sm fw-semibold"
+                    style="border-radius: 6px; padding: 7px 16px; border: none;
+                           background-color: @(activeTab == "roster" ? "#2BBFB3" : "transparent");
+                           color: @(activeTab == "roster" ? "#FFFFFF" : "#6B7280");"
+                    @onclick='() => SwitchToRoster()'>
+                <i class="bi bi-calendar-week me-1"></i>Daily Roster
+            </button>
+            <button class="btn btn-sm fw-semibold"
+                    style="border-radius: 6px; padding: 7px 16px; border: none;
+                           background-color: @(activeTab == "profile" ? "#2BBFB3" : "transparent");
+                           color: @(activeTab == "profile" ? "#FFFFFF" : "#6B7280");"
+                    @onclick='() => LoadMyProfileRecord()'>
+                <i class="bi bi-person-lines-fill me-1"></i>My Profile
+            </button>
+        </div>
+    </div>
+
+    @if (!StateProvider.IsAuthenticated || StateProvider.Role != "Doctor")
+    {
+        <div class="text-center py-5" style="background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+            <i class="bi bi-shield-lock-fill" style="font-size: 48px; color: #E11D48; display: block; margin-bottom: 12px;"></i>
+            <h5 style="color: #1A1A2E; font-weight: 600;">Access Denied</h5>
+            <p style="color: #6B7280; font-size: 14px;">This console is restricted to authenticated Doctor profiles.</p>
+        </div>
+    }
+
+    @* ========================= *@
+    @*   TAB 1: DAILY ROSTER     *@
+    @* ========================= *@
+    else if (activeTab == "roster")
+    {
+        <div class="row g-4 animate-fade-in">
+            <!-- Patient List -->
+            <div class="col-12 col-lg-5">
+                <div style="background-color: #FFFFFF; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); height: 100%;">
+                    <h5 style="font-size: 16px; font-weight: 600; color: #1A1A2E; margin-bottom: 20px;">
+                        <i class="bi bi-calendar2-check-fill me-2" style="color: #2BBFB3;"></i>My Daily Patient Roster
+                    </h5>
+                    <div class="d-flex flex-column gap-3">
+                        @if (appointments == null)
+                        {
+                            <div class="text-center py-3"><div class="spinner-border" style="color: #2BBFB3;" role="status"></div></div>
+                        }
+                        else if (!appointments.Any())
+                        {
+                            <div class="text-center py-4">
+                                <i class="bi bi-calendar-x" style="font-size: 36px; color: #D1D5DB;"></i>
+                                <p style="font-size: 14px; color: #6B7280; margin-top: 8px;">No scheduled appointments on your roster.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var app in appointments)
+                            {
+                                var isCurrent = selectedAppointment?.AppointmentId == app.AppointmentId;
+                                <div class="p-3" style="border-radius: 8px; border: 1px solid @(isCurrent ? "#2BBFB3" : "#E6EAF0");
+                                     background-color: @(isCurrent ? "#F0FDFB" : "#F9FAFB"); cursor: pointer; transition: all 0.2s;"
+                                     @onclick="() => LoadPatientWorkspace(app)">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 style="margin: 0; font-size: 14px; font-weight: 700; color: #1A1A2E;">@app.PatientName</h6>
+                                        <span style="font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 12px;
+                                               background-color: @(app.Status == "Completed" ? "#E0F7F5" : app.Status == "Cancelled" ? "#FFE4E6" : "#FEF9C3");
+                                               color: @(app.Status == "Completed" ? "#0D9488" : app.Status == "Cancelled" ? "#E11D48" : "#854D0E");">
+                                            @app.Status
+                                        </span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center small text-muted">
+                                        <span><i class="bi bi-clock me-1"></i>@app.AppointmentDate.ToString("hh:mm tt, dd MMM")</span>
+                                        <span style="color: #2BBFB3; font-weight: 500;">View <i class="bi bi-chevron-right"></i></span>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Consultation Panel -->
+            <div class="col-12 col-lg-7">
+                @if (selectedAppointment == null)
+                {
+                    <div class="d-flex flex-column align-items-center justify-content-center text-center p-5"
+                         style="background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); min-height: 350px;">
+                        <i class="bi bi-journal-medical" style="font-size: 40px; color: #2BBFB3; margin-bottom: 12px;"></i>
+                        <h6 style="color: #1A1A2E; font-weight: 600;">No Patient Selected</h6>
+                        <p style="color: #6B7280; font-size: 13px; max-width: 300px;">
+                            Click on any patient from your daily roster to open their consultation card.
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-4">
+                        <!-- Appointment Details -->
+                        <div style="background-color: #FFFFFF; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                            <div class="d-flex justify-content-between align-items-start border-bottom pb-3 mb-3 flex-wrap gap-2">
+                                <div>
+                                    <h4 style="font-size: 18px; font-weight: 700; color: #1A1A2E; margin: 0;">@selectedAppointment.PatientName</h4>
+                                    <small style="color: #6B7280;">@selectedAppointment.AppointmentDate.ToString("dddd, dd MMMM yyyy · hh:mm tt")</small>
+                                </div>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <button class="btn btn-sm fw-semibold"
+                                            style="background-color: #E0F7F5; color: #0D9488; border: none; border-radius: 6px;"
+                                            @onclick='() => UpdateStatus("Completed")'>
+                                        <i class="bi bi-check2-circle me-1"></i>Mark Complete
+                                    </button>
+                                    <button class="btn btn-sm fw-semibold"
+                                            style="background-color: #FFE4E6; color: #E11D48; border: none; border-radius: 6px;"
+                                            @onclick='() => UpdateStatus("Cancelled")'>
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                            <label style="font-size: 12px; font-weight: 600; color: #6B7280; text-transform: uppercase;">
+                                Patient Notes / Reason for Visit
+                            </label>
+                            <p style="font-size: 14px; color: #1A1A2E; background-color: #F4F6F9; padding: 12px; border-radius: 8px; margin: 4px 0 0 0; border-left: 3px solid #2BBFB3;">
+                                @(string.IsNullOrWhiteSpace(selectedAppointment.Notes) ? "No notes provided during booking." : selectedAppointment.Notes)
+                            </p>
+                        </div>
+
+                        <!-- Prescription Pad -->
+                        <div style="background-color: #FFFFFF; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                            <h5 style="font-size: 15px; font-weight: 600; color: #1A1A2E; margin-bottom: 16px;">
+                                <i class="bi bi-capsule me-2" style="color: #2BBFB3;"></i>Digital Prescription Pad
+                            </h5>
+                            <EditForm Model="newPrescription" OnValidSubmit="HandleIssuePrescription">
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-5">
+                                        <label class="field-label">Medicine Name</label>
+                                        <input type="text" class="form-control lp-input text-dark" placeholder="e.g. Paracetamol 500mg" @bind-value="newPrescription.MedicineName" required />
+                                    </div>
+                                    <div class="col-12 col-sm-6 col-md-3">
+                                        <label class="field-label">Dosage</label>
+                                        <input type="text" class="form-control lp-input text-dark" placeholder="e.g. 1 Tablet" @bind-value="newPrescription.Dosage" required />
+                                    </div>
+                                    <div class="col-12 col-sm-6 col-md-4">
+                                        <label class="field-label">Frequency</label>
+                                        <input type="text" class="form-control lp-input text-dark" placeholder="e.g. Twice daily" @bind-value="newPrescription.Frequency" required />
+                                    </div>
+                                    <div class="col-12 col-sm-6 col-md-3">
+                                        <label class="field-label">Start Date</label>
+                                        <input type="date" class="form-control lp-input text-dark" @bind-value="newPrescription.StartDate" />
+                                    </div>
+                                    <div class="col-12 col-sm-6 col-md-3">
+                                        <label class="field-label">End Date</label>
+                                        <input type="date" class="form-control lp-input text-dark" @bind-value="newPrescription.EndDate" />
+                                    </div>
+                                    <div class="col-12 col-md-6 d-flex align-items-end">
+                                        <button type="submit" class="btn fw-semibold w-100"
+                                                style="background-color: #1A6B6B; color: #FFFFFF; border-radius: 8px; font-size: 13px; padding: 10px 16px; border: none;">
+                                            <i class="bi bi-file-earmark-medical me-1"></i>Issue Prescription
+                                        </button>
+                                    </div>
+                                </div>
+                            </EditForm>
+
+                            <!-- Prescription History -->
+                            <div class="mt-4">
+                                <h6 style="font-size: 13px; font-weight: 600; color: #6B7280; margin-bottom: 12px; text-transform: uppercase;">
+                                    Prescription History
+                                </h6>
+                                @if (patientPrescriptions == null)
+                                {
+                                    <div class="text-center py-2"><div class="spinner-border spinner-border-sm" style="color: #2BBFB3;"></div></div>
+                                }
+                                else if (!patientPrescriptions.Any())
+                                {
+                                    <small class="text-muted">No prescriptions issued for this patient yet.</small>
+                                }
+                                else
+                                {
+                                    <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+                                        <table class="table align-middle m-0" style="width: 100%; font-size: 13px;">
+                                            <thead style="background-color: #F9FAFB; position: sticky; top: 0; z-index: 1;">
+                                                <tr>
+                                                    <th style="color: #6B7280; padding: 8px;">Medicine</th>
+                                                    <th style="color: #6B7280; padding: 8px;">Dosage</th>
+                                                    <th style="color: #6B7280; padding: 8px; display:none;" class="d-none d-sm-table-cell">Frequency</th>
+                                                    <th style="color: #6B7280; padding: 8px; text-align: center;">Status</th>
+                                                    <th style="color: #6B7280; padding: 8px; text-align: center;">Change</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var rx in patientPrescriptions)
+                                                {
+                                                    <tr style="border-bottom: 1px solid #F3F4F6;">
+                                                        <td style="font-weight: 600; color: #1A1A2E; padding: 10px 8px;">@rx.MedicineName</td>
+                                                        <td style="color: #1A1A2E; padding: 10px 8px;">@rx.Dosage</td>
+                                                        <td style="color: #6B7280; padding: 10px 8px;" class="d-none d-sm-table-cell">@rx.Frequency</td>
+                                                        <td style="text-align: center; padding: 10px 8px;">
+                                                            <span style="display:inline-block; font-size: 11px; font-weight: 600; white-space:nowrap;
+                                                                   background-color: @(rx.Status == "Active" ? "#D1FAF5" : rx.Status == "Completed" ? "#F3F4F6" : "#FFE4E6");
+                                                                   color: @(rx.Status == "Active" ? "#0D9488" : rx.Status == "Completed" ? "#6B7280" : "#E11D48");
+                                                                   padding: 3px 10px; border-radius: 12px;">
+                                                                @rx.Status
+                                                            </span>
+                                                        </td>
+                                                        <td style="padding: 8px; text-align: center;">
+                                                            <select class="form-select form-select-sm"
+                                                                    style="font-size:12px;border:1px solid #E6EAF0;border-radius:6px;background:#F9FAFB;min-width:120px;"
+                                                                    value="@rx.Status"
+                                                                    @onchange="(e) => UpdatePrescriptionStatus(rx, e.Value?.ToString() ?? rx.Status)">
+                                                                <option value="Active">Active</option>
+                                                                <option value="Completed">Completed</option>
+                                                                <option value="Discontinued">Discontinued</option>
+                                                            </select>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(rxStatusMsg))
+                                    {
+                                        <div class="mt-2" style="font-size:12px; color: @(rxStatusSuccess ? "#0D9488" : "#E11D48"); font-weight:500;">
+                                            <i class="bi @(rxStatusSuccess ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill") me-1"></i>@rxStatusMsg
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* ========================= *@
+    @*   TAB 2: MY PROFILE       *@
+    @* ========================= *@
+    else if (activeTab == "profile")
+    {
+        @if (myProfile == null)
+        {
+            <div class="text-center py-5"><div class="spinner-border" style="color: #2BBFB3;" role="status"></div></div>
+        }
+        else
+        {
+            @if (!string.IsNullOrWhiteSpace(profileSuccessMsg))
+            {
+                <div class="mb-4 p-3 d-flex align-items-center gap-2 animate-fade-in"
+                     style="background-color: #D1FAF5; color: #0D9488; border-radius: 10px; font-size: 14px; font-weight: 500;">
+                    <i class="bi bi-check-circle-fill" style="font-size: 18px;"></i>@profileSuccessMsg
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(profileErrorMsg))
+            {
+                <div class="mb-4 p-3 d-flex align-items-center gap-2"
+                     style="background-color: #FFE4E6; color: #E11D48; border-radius: 10px; font-size: 14px; font-weight: 500;">
+                    <i class="bi bi-exclamation-triangle-fill" style="font-size: 18px;"></i>@profileErrorMsg
+                </div>
+            }
+
+            <div class="row g-4 animate-fade-in text-dark">
+                <!-- Left: Avatar Card -->
+                <div class="col-12 col-md-4 col-lg-3">
+                    <div class="text-center p-4" style="background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+
+                        @* Profile photo: show upload area when editing, static image when reading *@
+                        @if (isEditingProfile)
+                        {
+                            <div style="position:relative; width:110px; height:110px; margin:0 auto 10px auto;">
+                                <img src="@(string.IsNullOrWhiteSpace(profileImagePreview) ? (string.IsNullOrWhiteSpace(editProfile.ProfilePictureUrl) ? "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=256&h=256&q=80" : editProfile.ProfilePictureUrl) : profileImagePreview)"
+                                     style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:4px solid #F0FDFB;" />
+                                <!-- Drag-and-drop overlay -->
+                                <div class="@(isDragging ? "drop-overlay drop-overlay-active" : "drop-overlay")"
+                                     @ondragover:preventDefault
+                                     @ondragenter="() => isDragging = true"
+                                     @ondragleave="() => isDragging = false"
+                                     @ondrop="HandlePhotoDrop"
+                                     @onclick="TriggerPhotoInput"
+                                     title="Click or drag photo here">
+                                    <i class="bi bi-camera-fill" style="font-size:20px;"></i>
+                                </div>
+                            </div>
+                            <InputFile id="doctorPhotoInput" OnChange="HandlePhotoSelected"
+                                       accept="image/jpeg,image/png,image/webp"
+                                       style="display:none;" />
+                            <div style="font-size:11px;color:#9CA3AF;margin-bottom:12px;">
+                                Click or drag &amp; drop to change photo
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(photoError))
+                            {
+                                <div style="font-size:12px;color:#E11D48;margin-bottom:8px;">@photoError</div>
+                            }
+                        }
+                        else
+                        {
+                            <img src="@myProfile.ProfilePictureUrl"
+                                 style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:4px solid #F0FDFB;box-shadow:0 4px 10px rgba(43,191,179,0.15);"
+                                 onerror="this.src='https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=256&h=256&q=80'" />
+                        }
+
+                        <h4 style="font-size: 17px; font-weight: 700; color: #1A1A2E; margin: 10px 0 2px 0;">
+                            Dr. @myProfile.FirstName @myProfile.LastName
+                        </h4>
+                        <span class="d-inline-block mb-3"
+                              style="font-size: 13px; font-weight: 600; color: #2BBFB3; background: #E0F7F5; padding: 4px 12px; border-radius: 12px;">
+                            @myProfile.Specialization
+                        </span>
+                        <hr style="border-color: #F3F4F6;" />
+                        <div class="text-start mb-3">
+                            <small class="text-muted d-block" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Department</small>
+                            <span style="font-size: 14px; font-weight: 600; color: #1A1A2E;">@myProfile.DepartmentName</span>
+                        </div>
+                        <div class="text-start mb-4">
+                            <small class="text-muted d-block" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Login Account</small>
+                            <span style="font-size: 14px; font-weight: 600; color: #6B7280; font-family: monospace;">@@@myProfile.Username</span>
+                        </div>
+
+                        @if (!isEditingProfile)
+                        {
+                            <button class="btn fw-semibold w-100"
+                                    style="background-color: #2BBFB3; color: #FFFFFF; border: none; border-radius: 8px; padding: 10px;"
+                                    @onclick="StartEditingProfile">
+                                <i class="bi bi-pencil-fill me-2"></i>Edit My Profile
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn fw-semibold w-100 mb-2"
+                                    style="background-color: #2BBFB3; color: #FFFFFF; border: none; border-radius: 8px; padding: 10px;"
+                                    @onclick="SaveProfileChanges">
+                                <i class="bi bi-check-circle-fill me-2"></i>Save Changes
+                            </button>
+                            <button class="btn w-100"
+                                    style="background: transparent; color: #6B7280; border: 1px solid #E6EAF0; border-radius: 8px; padding: 10px;"
+                                    @onclick="CancelEditProfile">
+                                Cancel
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Right: Details -->
+                <div class="col-12 col-md-8 col-lg-9">
+
+                    <!-- Biography -->
+                    <div style="background-color: #FFFFFF; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 20px;">
+                        <h5 class="section-title"><i class="bi bi-person-lines-fill me-2" style="color: #2BBFB3;"></i>Personal Biography</h5>
+                        @if (isEditingProfile)
+                        {
+                            <textarea class="form-control lp-input text-dark" rows="3"
+                                      placeholder="Describe your certifications, clinical experience..."
+                                      @bind="editProfile.AboutMe"></textarea>
+                        }
+                        else
+                        {
+                            <p style="font-size: 14px; color: #4B5563; line-height: 1.6; background: #F9FAFB; padding: 14px; border-radius: 8px; border-left: 4px solid #2BBFB3; margin: 0;">
+                                @(string.IsNullOrWhiteSpace(myProfile.AboutMe) ? "No professional bio entered yet." : myProfile.AboutMe)
+                            </p>
+                        }
+                    </div>
+
+                    <!-- Demographics & Contact -->
+                    <div style="background-color: #FFFFFF; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 20px;">
+                        <h5 class="section-title"><i class="bi bi-person-fill me-2" style="color: #2BBFB3;"></i>Demographics & Contact</h5>
+                        <div class="row g-3 mt-1">
+                            <div class="col-12 col-sm-6">
+                                <label class="field-label">Email Address</label>
+                                @if (isEditingProfile)
+                                {
+                                    <input type="email"
+       class="form-control lp-input text-dark"
+       placeholder="name@domain.com"
+       @bind="editProfile.Email" />
+                                }
+                                else { <div class="field-value">@myProfile.Email</div> }
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="field-label">Phone Number</label>
+                                @if (isEditingProfile)
+                                {
+                                    <input type="text" class="form-control lp-input text-dark" @bind="editProfile.Phone" />
+                                }
+                                else { <div class="field-value">@myProfile.Phone</div> }
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="field-label">Gender</label>
+                                @if (isEditingProfile)
+                                {
+                                    <select class="form-select lp-input text-dark" @bind="editProfile.Gender">
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                }
+                                else { <div class="field-value">@myProfile.Gender</div> }
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="field-label">Date of Birth</label>
+                                @if (isEditingProfile)
+                                {
+                                    <input type="date" class="form-control lp-input text-dark" @bind-value="editProfile.DateOfBirth" />
+                                }
+                                else { <div class="field-value">@myProfile.DateOfBirth?.ToString("MMMM dd, yyyy")</div> }
+                            </div>
+                            <div class="col-12">
+                                <label class="field-label">Residential Address</label>
+                                @if (isEditingProfile)
+                                {
+                                    <input type="text" class="form-control lp-input text-dark" @bind="editProfile.PhysicalAddress" />
+                                }
+                                else { <div class="field-value">@(string.IsNullOrWhiteSpace(myProfile.PhysicalAddress) ? "—" : myProfile.PhysicalAddress)</div> }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Change Password (edit mode only) -->
+                    @if (isEditingProfile)
+                    {
+                        <div style="background-color: #FFFFFF; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 20px;">
+                            <h5 class="section-title"><i class="bi bi-shield-lock-fill me-2" style="color: #2BBFB3;"></i>Change Password</h5>
+                            <div class="row g-3 mt-1">
+                                <div class="col-12 col-sm-6">
+                                    <label class="field-label">New Password</label>
+                                    <input type="password" class="form-control lp-input text-dark"
+                                           placeholder="Leave blank to keep current password"
+                                           @bind="newPassword" />
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(newPassword))
+                                {
+                                    <div class="col-12 col-sm-6">
+                                        <label class="field-label">Confirm New Password</label>
+                                        <input type="password" class="form-control lp-input text-dark"
+                                               placeholder="Re-enter new password"
+                                               @bind="confirmPassword" />
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Employment & Schedule (read-only) -->
+                    <div style="background-color: #FFFFFF; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                        <h5 class="section-title"><i class="bi bi-briefcase-fill me-2" style="color: #2BBFB3;"></i>Employment & Schedule</h5>
+                        <div class="row g-3 mt-1">
+                            <div class="col-12 col-sm-4">
+                                <label class="field-label">Work Type</label>
+                                <div class="field-value" style="color: #0D9488; font-weight: 700;">@myProfile.WorkType</div>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <label class="field-label">Employment Date</label>
+                                <div class="field-value">@myProfile.DateOfEmployment?.ToString("yyyy-MM-dd")</div>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <label class="field-label">Salary</label>
+                                <div class="field-value" style="font-weight: 700;">$@myProfile.Salary.ToString("N2") / mo</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="field-label">Schedule</label>
+                                <div class="p-3" style="background-color: #F4F6F9; border-radius: 8px; border: 1px dashed #E6EAF0;">
+                                    <div class="d-flex flex-column flex-sm-row justify-content-between gap-2">
+                                        <span style="font-size: 13px; color: #1A1A2E;">
+                                            <i class="bi bi-calendar-check me-2" style="color: #2BBFB3;"></i>
+                                            <strong>Days:</strong> @myProfile.ScheduleDays
+                                        </span>
+                                        <span style="font-size: 13px; color: #1A1A2E;">
+                                            <i class="bi bi-clock me-2" style="color: #2BBFB3;"></i>
+                                            <strong>Hours:</strong> @myProfile.WorkStartTime – @myProfile.WorkEndTime
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .field-label { font-size: 12px; color: #6B7280; font-weight: 600; margin-bottom: 4px; display: block; }
+    .lp-input { background-color: #F9FAFB; border: 1px solid #E6EAF0; border-radius: 8px; padding: 10px 14px; }
+    .field-value {
+        font-size: 14px; font-weight: 500; color: #1A1A2E;
+        background-color: #F9FAFB; border: 1px solid #F3F4F6;
+        border-radius: 8px; padding: 10px 14px; min-height: 42px;
+        display: flex; align-items: center;
+    }
+    .section-title {
+        font-size: 14px; font-weight: 700; color: #1A1A2E;
+        margin: 0 0 4px 0; padding-bottom: 12px;
+        border-bottom: 1px solid #F3F4F6;
+    }
+    .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    /* Drag-and-drop photo overlay */
+    .drop-overlay {
+        position: absolute; inset: 0; border-radius: 50%;
+        background: rgba(43,191,179,0.55); color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0; cursor: pointer; transition: opacity 0.2s;
+    }
+    .drop-overlay:hover, .drop-overlay-active { opacity: 1; }
+</style>
+
+@code {
+    // --- Roster Tab ---
+    private List<AppointmentDto>? appointments;
+    private List<PrescriptionDto>? patientPrescriptions;
+    private AppointmentDto? selectedAppointment;
+    private PrescriptionDto newPrescription = new();
+    private string activeTab = "roster";
+    private string rxStatusMsg = "";
+    private bool rxStatusSuccess = false;
+
+    // --- Profile Tab ---
+    private DoctorDto? myProfile;
+    private DoctorDto editProfile = new();
+    private bool isEditingProfile = false;
+    private string profileSuccessMsg = "";
+    private string profileErrorMsg = "";
+    private string newPassword = "";
+    private string confirmPassword = "";
+
+    // --- Photo upload ---
+    private string profileImagePreview = "";
+    private string photoError = "";
+    private bool isDragging = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (StateProvider.IsAuthenticated && StateProvider.Role == "Doctor")
+            await LoadDoctorRoster();
+    }
+
+    private async Task LoadDoctorRoster()
+    {
+        appointments = await Http.GetFromJsonAsync<List<AppointmentDto>>(
+            $"api/Admin/doctors/{StateProvider.UserId}/appointments");
+    }
+
+    private void SwitchToRoster() => activeTab = "roster";
+
+    private async Task LoadMyProfileRecord()
+    {
+        activeTab = "profile";
+        isEditingProfile = false;
+        profileSuccessMsg = "";
+        profileErrorMsg = "";
+        if (myProfile == null)
+        {
+            var allDocs = await Http.GetFromJsonAsync<List<DoctorDto>>("api/Admin/doctors");
+            myProfile = allDocs?.FirstOrDefault(d => d.DoctorId == StateProvider.UserId);
+        }
+    }
+
+    private void StartEditingProfile()
+    {
+        if (myProfile == null) return;
+        editProfile = new DoctorDto
+        {
+            DoctorId = myProfile.DoctorId, FirstName = myProfile.FirstName,
+            LastName = myProfile.LastName, Email = myProfile.Email,
+            Phone = myProfile.Phone, Gender = myProfile.Gender,
+            DateOfBirth = myProfile.DateOfBirth, PhysicalAddress = myProfile.PhysicalAddress,
+            AboutMe = myProfile.AboutMe, ProfilePictureUrl = myProfile.ProfilePictureUrl,
+            Specialization = myProfile.Specialization, DepartmentId = myProfile.DepartmentId,
+            DepartmentName = myProfile.DepartmentName, WorkType = myProfile.WorkType,
+            DateOfEmployment = myProfile.DateOfEmployment, Salary = myProfile.Salary,
+            ScheduleDays = myProfile.ScheduleDays, WorkStartTime = myProfile.WorkStartTime,
+            WorkEndTime = myProfile.WorkEndTime, Username = myProfile.Username,
+            IsActive = myProfile.IsActive, ConsultationFee = myProfile.ConsultationFee,
+        };
+        newPassword = ""; confirmPassword = "";
+        profileSuccessMsg = ""; profileErrorMsg = "";
+        profileImagePreview = ""; photoError = "";
+        isEditingProfile = true;
+    }
+
+    private void CancelEditProfile()
+    {
+        isEditingProfile = false;
+        newPassword = ""; confirmPassword = "";
+        profileSuccessMsg = ""; profileErrorMsg = "";
+        profileImagePreview = ""; photoError = "";
+    }
+
+    // ── Photo: handle file input ──────────────────────────────────────────
+    private async Task TriggerPhotoInput()
+        => await JS.InvokeVoidAsync("eval", "document.getElementById('doctorPhotoInput').click()");
+
+    private async Task HandlePhotoSelected(InputFileChangeEventArgs e)
+        => await ProcessPhotoFile(e.File);
+
+    private async Task HandlePhotoDrop(DragEventArgs e)
+    {
+        // Blazor drag-drop for InputFile: trigger the file picker instead
+        // (full drag-drop from OS requires JS interop beyond scope here)
+        isDragging = false;
+        await TriggerPhotoInput();
+    }
+
+    private async Task ProcessPhotoFile(IBrowserFile file)
+    {
+        photoError = "";
+        if (file.Size > 2 * 1024 * 1024) { photoError = "Image must be under 2 MB."; return; }
+        var allowed = new[] { "image/jpeg", "image/png", "image/webp" };
+        if (!allowed.Contains(file.ContentType)) { photoError = "Only JPG, PNG, or WEBP allowed."; return; }
+        using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
+        using var ms = new System.IO.MemoryStream();
+        await stream.CopyToAsync(ms);
+        var base64 = Convert.ToBase64String(ms.ToArray());
+        profileImagePreview = $"data:{file.ContentType};base64,{base64}";
+        // Store as data URL in ProfilePictureUrl so it saves with the profile
+        editProfile.ProfilePictureUrl = profileImagePreview;
+    }
+
+    private async Task SaveProfileChanges()
+    {
+        profileSuccessMsg = ""; profileErrorMsg = "";
+
+        // Email validation
+        if (!string.IsNullOrWhiteSpace(editProfile.Email))
+        {
+            var emailRegex = new System.Text.RegularExpressions.Regex(
+                @"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$");
+            if (!emailRegex.IsMatch(editProfile.Email))
+            { profileErrorMsg = "Please enter a valid email address (e.g. name@domain.com)."; return; }
+        }
+
+        if (!string.IsNullOrWhiteSpace(newPassword))
+        {
+            if (newPassword != confirmPassword)
+            { profileErrorMsg = "Passwords do not match. Please re-enter."; return; }
+            if (newPassword.Length < 6)
+            { profileErrorMsg = "Password must be at least 6 characters."; return; }
+            editProfile.PasswordHash = newPassword;
+        }
+
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/Admin/doctors/{editProfile.DoctorId}/profile", editProfile);
+            if (response.IsSuccessStatusCode)
+            {
+                var allDocs = await Http.GetFromJsonAsync<List<DoctorDto>>("api/Admin/doctors");
+                myProfile = allDocs?.FirstOrDefault(d => d.DoctorId == StateProvider.UserId);
+                isEditingProfile = false;
+                newPassword = ""; confirmPassword = "";
+                profileImagePreview = ""; photoError = "";
+                profileSuccessMsg = "Profile updated successfully!";
+            }
+            else { profileErrorMsg = "Failed to save changes. Please try again."; }
+        }
+        catch (Exception ex) { profileErrorMsg = $"An error occurred: {ex.Message}"; }
+    }
+
+    private async Task LoadPatientWorkspace(AppointmentDto targetApp)
+    {
+        selectedAppointment = targetApp;
+        patientPrescriptions = null;
+        rxStatusMsg = "";
+        int patientId = targetApp.PatientId;
+        patientPrescriptions = await Http.GetFromJsonAsync<List<PrescriptionDto>>(
+            $"api/Admin/patients/{patientId}/prescriptions");
+        newPrescription = new PrescriptionDto
+        {
+            DoctorId = StateProvider.UserId, PatientId = patientId,
+            Status = "Active", StartDate = DateTime.Today, EndDate = DateTime.Today.AddDays(7)
+        };
+    }
+
+    private async Task HandleIssuePrescription()
+    {
+        if (selectedAppointment == null || string.IsNullOrWhiteSpace(newPrescription.MedicineName)) return;
+        var response = await Http.PostAsJsonAsync("api/Admin/prescriptions", newPrescription);
+        if (response.IsSuccessStatusCode)
+        {
+            var pid = newPrescription.PatientId;
+            newPrescription = new PrescriptionDto
+            {
+                DoctorId = StateProvider.UserId, PatientId = pid,
+                Status = "Active", StartDate = DateTime.Today, EndDate = DateTime.Today.AddDays(7)
+            };
+            patientPrescriptions = await Http.GetFromJsonAsync<List<PrescriptionDto>>(
+                $"api/Admin/patients/{pid}/prescriptions");
+        }
+    }
+
+    // ── Prescription status change ─────────────────────────────────────────
+    private async Task UpdatePrescriptionStatus(PrescriptionDto rx, string newStatus)
+    {
+        if (newStatus == rx.Status) return;
+        rxStatusMsg = ""; rxStatusSuccess = false;
+        var response = await Http.PutAsJsonAsync(
+            $"api/Admin/prescriptions/{rx.PrescriptionId}/status", newStatus);
+        if (response.IsSuccessStatusCode)
+        {
+            rx.Status = newStatus;
+            rxStatusMsg = $"{rx.MedicineName} marked as {newStatus}.";
+            rxStatusSuccess = true;
+        }
+        else
+        {
+            rxStatusMsg = "Failed to update status.";
+        }
+        StateHasChanged();
+    }
+
+    private async Task UpdateStatus(string nextStatus)
+    {
+        if (selectedAppointment == null) return;
+        var response = await Http.PutAsJsonAsync(
+            $"api/Admin/appointments/{selectedAppointment.AppointmentId}/status", nextStatus);
+        if (response.IsSuccessStatusCode)
+        {
+            selectedAppointment.Status = nextStatus;
+            await LoadDoctorRoster();
+        }
+    }
+}

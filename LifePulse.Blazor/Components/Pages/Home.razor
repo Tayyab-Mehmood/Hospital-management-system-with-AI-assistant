@@ -1,0 +1,263 @@
+﻿@page "/"
+@using LifePulse.Shared
+@inject HttpClient Http
+@inject NavigationManager Nav
+@inject LifePulse.Blazor.CustomAuthStateProvider StateProvider
+
+<PageTitle>Dashboard | LifePulse HMS</PageTitle>
+
+<div class="px-2 px-md-4 pt-3 pt-md-4 pb-5">
+
+    @* Top Bar *@
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold m-0" style="color: #1A1A2E; font-size: clamp(20px, 5vw, 26px);">Overview</h2>
+            <small style="color: #6B7280;">@DateTime.Today.ToString("dddd, d MMMM yyyy") — All systems operational</small>
+        </div>
+        <div class="d-flex align-items-center gap-2"
+             style="background-color: #FFFFFF; border: 1px solid #F3F4F6; padding: 4px 12px 4px 4px; border-radius: 30px; font-size: 13px;">
+            <span class="d-flex align-items-center justify-content-center fw-bold"
+                  style="width: 28px; height: 28px; background-color: #F4F6F9; color: #2BBFB3; border-radius: 50%; font-size: 11px;">SA</span>
+            <span class="fw-semibold" style="color: #1A1A2E;">Super Admin</span>
+        </div>
+    </div>
+
+    @* Stat Cards *@
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-4">
+            <div style="background-color: #FFFFFF; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                <div class="d-flex justify-content-between align-items-start">
+                    <span style="font-size: 13px; color: #6B7280; font-weight: 500;">Total Doctors</span>
+                    <span class="d-flex align-items-center justify-content-center"
+                          style="width: 40px; height: 40px; background-color: #E0F7F5; color: #0D9488; border-radius: 10px; font-size: 20px;">
+                        <i class="bi bi-person-badge-fill"></i>
+                    </span>
+                </div>
+                <h2 style="font-size: 30px; font-weight: 700; color: #1A1A2E; margin: 8px 0;">@(doctorsList?.Count ?? 0)</h2>
+                <div style="font-size: 12px; color: #2BBFB3; font-weight: 600;"><i class="bi bi-arrow-up-short"></i> +3 this month</div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-4">
+            <div style="background-color: #FFFFFF; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                <div class="d-flex justify-content-between align-items-start">
+                    <span style="font-size: 13px; color: #6B7280; font-weight: 500;">Patients Registered</span>
+                    <span class="d-flex align-items-center justify-content-center"
+                          style="width: 40px; height: 40px; background-color: #FEE2E2; color: #E11D48; border-radius: 10px; font-size: 20px;">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                    </span>
+                </div>
+                <h2 style="font-size: 30px; font-weight: 700; color: #1A1A2E; margin: 8px 0;">@patientsCount</h2>
+                <div style="font-size: 12px; color: #2BBFB3; font-weight: 600;"><i class="bi bi-arrow-up-short"></i> +24 this week</div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-4">
+            <div style="background-color: #FFFFFF; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                <div class="d-flex justify-content-between align-items-start">
+                    <span style="font-size: 13px; color: #6B7280; font-weight: 500;">Total Appointments</span>
+                    <span class="d-flex align-items-center justify-content-center"
+                          style="width: 40px; height: 40px; background-color: #FEF9C3; color: #854D0E; border-radius: 10px; font-size: 20px;">
+                        <i class="bi bi-calendar-check-fill"></i>
+                    </span>
+                </div>
+                <h2 style="font-size: 30px; font-weight: 700; color: #1A1A2E; margin: 8px 0;">@(appointmentsList?.Count ?? 0)</h2>
+                <div style="font-size: 12px; color: #854D0E; font-weight: 600; background-color: #FEF9C3; padding: 2px 8px; border-radius: 12px; width: fit-content;">
+                    @(appointmentsList?.Where(a => a.Status == "Scheduled" || a.Status == "Pending").Count() ?? 0) pending
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Recent Appointments + Department Load *@
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-lg-7">
+            <div style="background-color: #FFFFFF; border-radius: 12px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); height: 100%;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 style="font-size: 16px; font-weight: 600; color: #1A1A2E; margin: 0;">Recent Appointments</h3>
+                    <span @onclick='() => Nav.NavigateTo("admin/patients")'
+                          style="font-size: 12px; color: #2BBFB3; font-weight: 600; cursor: pointer; text-decoration: underline;">
+                        View all
+                    </span>
+                </div>
+                <div class="d-flex flex-column gap-3">
+                    @if (appointmentsList == null)
+                    {
+                        <div class="text-center py-4"><div class="spinner-border" style="color: #2BBFB3; width: 1.5rem; height: 1.5rem;" role="status"></div></div>
+                    }
+                    else if (!appointmentsList.Any())
+                    {
+                        <p style="font-size: 13px; color: #6B7280; margin: 0;">No active scheduled appointments recorded.</p>
+                    }
+                    else
+                    {
+                        @foreach (var app in appointmentsList.Take(5))
+                        {
+                            <div class="d-flex align-items-center justify-content-between p-3 flex-wrap gap-2"
+                                 style="background-color: #F4F6F9; border-radius: 8px;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span style="font-family: monospace; font-weight: 700; color: #2BBFB3; font-size: 13px;">@app.AppointmentDate.ToString("HH:mm")</span>
+                                    <div>
+                                        <h6 style="margin: 0; font-size: 14px; font-weight: 600; color: #1A1A2E;">@app.PatientName</h6>
+                                        <small style="color: #6B7280; font-size: 12px;">@app.DepartmentName • @app.DoctorName</small>
+                                    </div>
+                                </div>
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background-color: @(app.Status == "Completed" ? "#0D9488" : "#854D0E"); flex-shrink: 0;"></span>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-5">
+            <div style="background-color: #FFFFFF; border-radius: 12px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); height: 100%;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 style="font-size: 16px; font-weight: 600; color: #1A1A2E; margin: 0;">Department Load</h3>
+                    <span style="font-size: 12px; color: #6B7280; font-weight: 500;">Patient Capacity</span>
+                </div>
+                <div class="d-flex flex-column gap-3">
+                    @if (departmentsList == null)
+                    {
+                        <div class="text-center py-3"><div class="spinner-border" style="color: #2BBFB3; width: 1.5rem; height: 1.5rem;" role="status"></div></div>
+                    }
+                    else if (!departmentsList.Any())
+                    {
+                        <p style="font-size: 13px; color: #6B7280; margin: 0;">No departments found.</p>
+                    }
+                    else
+                    {
+                        @foreach (var dept in departmentsList.Take(6))
+                        {
+                            int deptPatientCount = appointmentsList?.Count(a => a.DepartmentName != null &&
+                                                        a.DepartmentName.Equals(dept.Name, StringComparison.OrdinalIgnoreCase)) ?? 0;
+                            int deptDoctorCount = Math.Max(doctorsList?.Count(d => d.DepartmentId == dept.DepartmentId) ?? 0, 1);
+                            int capacity = deptDoctorCount * 20;
+                            int pct = Math.Min((deptPatientCount * 100) / capacity, 100);
+                            string barColor = pct >= 80 ? "#E11D48" : pct >= 50 ? "#F59E0B" : "#2BBFB3";
+
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span style="font-size: 13px; font-weight: 600; color: #1A1A2E;">@dept.Name</span>
+                                    <span style="font-size: 12px; color: #6B7280; font-family: monospace;">@deptPatientCount / @capacity pts</span>
+                                </div>
+                                <div class="progress" style="height: 6px; background-color: #E6EAF0; border-radius: 10px;">
+                                    <div class="progress-bar" style="width: @(pct)%; background-color: @barColor !important; border-radius: 10px;"></div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Doctors Directory *@
+    <div class="row">
+        <div class="col-12">
+            <div style="background-color: #FFFFFF; border-radius: 12px; padding: 20px 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 style="font-size: 16px; font-weight: 600; color: #1A1A2E; margin: 0;">Doctors Directory</h3>
+                    <span @onclick='() => Nav.NavigateTo("admin/doctors")'
+                          style="font-size: 13px; color: #2BBFB3; font-weight: 600; cursor: pointer; text-decoration: underline;">
+                        + Add Doctor
+                    </span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle m-0" style="width: 100%; min-width: 480px;">
+                        <thead>
+                            <tr style="background-color: #F9FAFB; border-bottom: 2px solid #F3F4F6;">
+                                <th style="font-size: 13px; font-weight: 600; color: #6B7280; padding: 12px;">Doctor</th>
+                                <th style="font-size: 13px; font-weight: 600; color: #6B7280; padding: 12px;">Specialization</th>
+                                <th style="font-size: 13px; font-weight: 600; color: #6B7280; padding: 12px; display: none;" class="d-none d-sm-table-cell">Department</th>
+                                <th style="font-size: 13px; font-weight: 600; color: #6B7280; padding: 12px; text-align: center;">Today</th>
+                                <th style="font-size: 13px; font-weight: 600; color: #6B7280; padding: 12px; text-align: center;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (doctorsList == null)
+                            {
+                                <tr><td colspan="5" class="text-center py-3"><div class="spinner-border" style="color: #2BBFB3;"></div></td></tr>
+                            }
+                            else if (!doctorsList.Any())
+                            {
+                                <tr><td colspan="5" class="text-center py-3" style="color: #6B7280; font-size: 14px;">No staff records available.</td></tr>
+                            }
+                            else
+                            {
+                                @foreach (var doc in doctorsList.Take(4))
+                                {
+                                    int patientsToday = appointmentsList?.Count(a => a.DoctorId == doc.DoctorId && a.AppointmentDate.Date == DateTime.Today) ?? 0;
+                                    <tr style="border-bottom: 1px solid #F3F4F6;">
+                                        <td style="padding: 14px 12px;">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="d-flex align-items-center justify-content-center fw-bold"
+                                                      style="width: 32px; height: 32px; background-color: #E0F7F5; color: #0D9488; border-radius: 50%; font-size: 11px; flex-shrink: 0;">
+                                                    @doc.FirstName.Substring(0, 1)@doc.LastName.Substring(0, 1)
+                                                </span>
+                                                <span style="font-size: 13px; font-weight: 700; color: #1A1A2E;">Dr. @doc.FirstName @doc.LastName</span>
+                                            </div>
+                                        </td>
+                                        <td style="font-size: 13px; color: #1A1A2E; padding: 14px 12px;">@doc.Specialization</td>
+                                        <td style="font-size: 13px; color: #6B7280; padding: 14px 12px;" class="d-none d-sm-table-cell">@doc.DepartmentName</td>
+                                        <td style="font-size: 14px; font-weight: 600; color: #1A1A2E; padding: 14px 12px; text-align: center;">@patientsToday</td>
+                                        <td style="padding: 14px 12px; text-align: center;">
+                                            @if (doc.IsActive)
+                                            {
+                                                <span style="display:inline-block;font-size:12px;font-weight:600;background-color:#D1FAF5;color:#0D9488;padding:4px 12px;border-radius:20px;white-space:nowrap;">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span style="display:inline-block;font-size:12px;font-weight:600;background-color:#FFE4E6;color:#E11D48;padding:4px 12px;border-radius:20px;white-space:nowrap;">On Leave</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<DoctorDto> doctorsList = new();
+    private List<DepartmentDto> departmentsList = new();
+    private List<AppointmentDto> appointmentsList = new();
+    private int patientsCount = 0;
+
+    protected override void OnInitialized()
+    {
+        // Only redirect to landing if no one is logged in yet.
+        // Authenticated admins coming back to "/" after login go straight to the dashboard.
+        if (!StateProvider.IsAuthenticated)
+        {
+            Nav.NavigateTo("/landing");
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Skip API calls if we're about to redirect away
+        if (!StateProvider.IsAuthenticated) return;
+
+        try
+        {
+            var depts = await Http.GetFromJsonAsync<List<DepartmentDto>>("api/Admin/departments");
+            if (depts != null) departmentsList = depts;
+
+            var docs = await Http.GetFromJsonAsync<List<DoctorDto>>("api/Admin/doctors");
+            if (docs != null) doctorsList = docs;
+
+            var apps = await Http.GetFromJsonAsync<List<AppointmentDto>>("api/Admin/appointments");
+            if (apps != null) appointmentsList = apps;
+
+            var patients = await Http.GetFromJsonAsync<List<PatientDto>>("api/Admin/patients");
+            if (patients != null) patientsCount = patients.Count;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Dashboard error: {ex.Message}");
+        }
+    }
+}

@@ -1,0 +1,551 @@
+﻿@page "/patient/profile"
+@using LifePulse.Shared
+@inject HttpClient Http
+@inject LifePulse.Blazor.CustomAuthStateProvider StateProvider
+@inject IJSRuntime JS
+
+<PageTitle>My Profile | LifePulse</PageTitle>
+
+@if (!StateProvider.IsAuthenticated || StateProvider.Role != "Patient")
+{
+    <p style="color:#6B7280; text-align:center; padding-top: 40px;">
+        Access denied. <a href="login" style="color:#2BBFB3;">Sign in</a>
+    </p>
+    return;
+}
+
+<div class="px-4 pt-4 pb-5">
+
+    @* Header *@
+    <div class="mb-4">
+        <h2 style="font-size: 26px; font-weight: 700; color: #1A1A2E; margin: 0;">My Profile</h2>
+        <p style="font-size: 14px; color: #6B7280; margin: 4px 0 0 0;">
+            View and update your personal information and account credentials.
+        </p>
+    </div>
+
+    @* Alert Messages *@
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="mb-4 p-3 d-flex align-items-center gap-2"
+             style="background-color: #D1FAF5; color: #0D9488; border-radius: 10px; font-size: 14px; font-weight: 500;">
+            <i class="bi bi-check-circle-fill" style="font-size: 18px;"></i>
+            @successMessage
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="mb-4 p-3 d-flex align-items-center gap-2"
+             style="background-color: #FFE4E6; color: #E11D48; border-radius: 10px; font-size: 14px; font-weight: 500;">
+            <i class="bi bi-exclamation-triangle-fill" style="font-size: 18px;"></i>
+            @errorMessage
+        </div>
+    }
+
+    @if (patient == null)
+    {
+        <div class="d-flex justify-content-center py-5">
+            <div class="spinner-border" style="color: #2BBFB3; width: 2rem; height: 2rem;"></div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+
+            @* Left Column — Avatar + Quick Info *@
+            <div class="col-12 col-lg-3">
+                <div style="background-color: #FFFFFF; border-radius: 14px; padding: 28px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); text-align: center;">
+
+                    @* Avatar / Profile Photo *@
+                    <div class="profile-avatar-wrapper mx-auto mb-3" @onclick="TriggerProfilePhotoInput" title="Click to change photo">
+                        @if (!string.IsNullOrEmpty(profileImageDataUrl))
+                        {
+                            <img src="@profileImageDataUrl" alt="Profile" class="profile-avatar-img" />
+                        }
+                        else if (!string.IsNullOrEmpty(patient?.ProfileImageBase64))
+                        {
+                            <img src="data:@patient.ProfileImageMimeType;base64,@patient.ProfileImageBase64"
+                                 alt="Profile" class="profile-avatar-img" />
+                        }
+                        else
+                        {
+                            <span style="font-size: 32px; font-weight: 700; color: #FFFFFF; user-select: none;">
+                                @patient?.FirstName.Substring(0, 1)@patient?.LastName.Substring(0, 1)
+                            </span>
+                        }
+                        <div class="profile-avatar-overlay">
+                            <i class="bi bi-camera-fill" style="font-size: 20px;"></i>
+                        </div>
+                    </div>
+                    <InputFile id="profileAvatarInput" OnChange="HandleProfileImageSelected"
+                               accept="image/jpeg,image/png,image/webp" style="display:none;" />
+                    @if (!string.IsNullOrEmpty(imageUploadError))
+                    {
+                        <p style="font-size: 11px; color: #E11D48; margin: 0 0 8px 0;">@imageUploadError</p>
+                    }
+
+                    <h4 style="font-size: 18px; font-weight: 700; color: #1A1A2E; margin: 0;">
+                        @patient.FirstName @patient.LastName
+                    </h4>
+                    <p style="font-size: 13px; color: #2BBFB3; font-weight: 600; margin: 4px 0 0 0;">Patient</p>
+
+                    <hr style="border-color: #F3F4F6; margin: 16px 0;" />
+
+                    <div class="d-flex flex-column gap-2 text-start">
+                        <div class="d-flex align-items-center gap-2" style="font-size: 13px; color: #6B7280;">
+                            <i class="bi bi-envelope" style="color: #2BBFB3; width: 16px;"></i>
+                            <span style="word-break: break-all;">@patient.Email</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2" style="font-size: 13px; color: #6B7280;">
+                            <i class="bi bi-telephone" style="color: #2BBFB3; width: 16px;"></i>
+                            <span>@patient.Phone</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2" style="font-size: 13px; color: #6B7280;">
+                            <i class="bi bi-droplet-fill" style="color: #E11D48; width: 16px;"></i>
+                            <span>Blood: @(patient.BloodGroup ?? "Not set")</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2" style="font-size: 13px; color: #6B7280;">
+                            <i class="bi bi-calendar3" style="color: #2BBFB3; width: 16px;"></i>
+                            <span>Since @patient.CreatedAt.ToString("MMM yyyy")</span>
+                        </div>
+                    </div>
+
+                    <hr style="border-color: #F3F4F6; margin: 16px 0;" />
+
+                    @* Edit / Save Toggle *@
+                    @if (!isEditing)
+                    {
+                        <button class="btn w-100 fw-semibold"
+                                style="background-color: #2BBFB3; color: #FFFFFF; border: none; border-radius: 8px; padding: 10px;"
+                                @onclick="StartEditing">
+                            <i class="bi bi-pencil-fill me-2"></i>Edit Profile
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn w-100 fw-semibold mb-2"
+                                style="background-color: #2BBFB3; color: #FFFFFF; border: none; border-radius: 8px; padding: 10px;"
+                                @onclick="SaveProfile">
+                            <i class="bi bi-check-circle-fill me-2"></i>Save Changes
+                        </button>
+                        <button class="btn w-100"
+                                style="background-color: transparent; color: #6B7280; border: 1px solid #E6EAF0; border-radius: 8px; padding: 10px;"
+                                @onclick="CancelEditing">
+                            Cancel
+                        </button>
+                    }
+                </div>
+            </div>
+
+            @* Right Column — Detail Sections *@
+            <div class="col-12 col-lg-9">
+
+                @* Personal Information *@
+                <div style="background-color: #FFFFFF; border-radius: 14px; padding: 28px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 20px;">
+                    <h5 class="section-title">
+                        <i class="bi bi-person-fill me-2" style="color: #2BBFB3;"></i>Personal Information
+                    </h5>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-12 col-md-6">
+                            <label class="field-label">First Name</label>
+                            @if (isEditing)
+                            {
+                                <input type="text" class="form-control field-input text-dark" @bind="editModel.FirstName" />
+                            }
+                            else
+                            {
+                                <div class="field-value">@patient.FirstName</div>
+                            }
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="field-label">Last Name</label>
+                            @if (isEditing)
+                            {
+                                <input type="text" class="form-control field-input text-dark" @bind="editModel.LastName" />
+                            }
+                            else
+                            {
+                                <div class="field-value">@patient.LastName</div>
+                            }
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="field-label">Gender</label>
+                            @if (isEditing)
+                            {
+                                <select class="form-select field-input text-dark" @bind="editModel.Gender">
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            }
+                            else
+                            {
+                                <div class="field-value">@patient.Gender</div>
+                            }
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="field-label">Date of Birth</label>
+                            @if (isEditing)
+                            {
+                                <input type="date" class="form-control field-input text-dark" @bind="editModel.DateOfBirth" />
+                            }
+                            else
+                            {
+                                <div class="field-value">@patient.DateOfBirth.ToString("dd MMM yyyy")</div>
+                            }
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="field-label">Blood Group</label>
+                            @if (isEditing)
+                            {
+                                <select class="form-select field-input text-dark" @bind="editModel.BloodGroup">
+                                    <option value="">-- Select --</option>
+                                    <option>A+</option>
+                                    <option>A-</option>
+                                    <option>B+</option>
+                                    <option>B-</option>
+                                    <option>AB+</option>
+                                    <option>AB-</option>
+                                    <option>O+</option>
+                                    <option>O-</option>
+                                </select>
+                            }
+                            else
+                            {
+                                <div class="field-value">@(patient.BloodGroup ?? "Not set")</div>
+                            }
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="field-label">Emergency Contact</label>
+                            @if (isEditing)
+                            {
+                                <input type="text" class="form-control field-input text-dark"
+                                       placeholder="Name & phone number" @bind="editModel.EmergencyContact" />
+                            }
+                            else
+                            {
+                                <div class="field-value">@(patient.EmergencyContact ?? "Not set")</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                @* Contact Information *@
+                <div style="background-color: #FFFFFF; border-radius: 14px; padding: 28px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 20px;">
+                    <h5 class="section-title">
+                        <i class="bi bi-envelope-fill me-2" style="color: #2BBFB3;"></i>Contact Information
+                    </h5>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-12 col-md-6">
+                            <label class="field-label">Email Address</label>
+                            @if (isEditing)
+                            {
+                                <input type="email" class="form-control field-input text-dark" @bind="editModel.Email" />
+                            }
+                            else
+                            {
+                                <div class="field-value">@patient.Email</div>
+                            }
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="field-label">Phone Number</label>
+                            @if (isEditing)
+                            {
+                                <input type="text" class="form-control field-input text-dark" @bind="editModel.Phone" />
+                            }
+                            else
+                            {
+                                <div class="field-value">@patient.Phone</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                @* Account Credentials *@
+                <div style="background-color: #FFFFFF; border-radius: 14px; padding: 28px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+                    <h5 class="section-title">
+                        <i class="bi bi-shield-lock-fill me-2" style="color: #2BBFB3;"></i>Account Credentials
+                    </h5>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-12 col-md-6">
+                            <label class="field-label">Username</label>
+                            <div class="field-value d-flex align-items-center gap-2">
+                                <i class="bi bi-person-circle" style="color: #2BBFB3;"></i>
+                                @StateProvider.Username
+                                <span style="font-size: 11px; background-color: #F4F6F9; color: #6B7280; padding: 2px 8px; border-radius: 10px;">Cannot be changed</span>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="field-label">Change Password</label>
+                            @if (isEditing)
+                            {
+                                <input type="password" class="form-control field-input text-dark"
+                                       placeholder="Leave blank to keep current password"
+                                       @bind="newPassword" />
+                            }
+                            else
+                            {
+                                <div class="field-value">
+                                    <span style="letter-spacing: 3px; color: #9CA3AF;">••••••••</span>
+                                </div>
+                            }
+                        </div>
+                        @if (isEditing && !string.IsNullOrWhiteSpace(newPassword))
+                        {
+                            <div class="col-12 col-md-6">
+                                <label class="field-label">Confirm New Password</label>
+                                <input type="password" class="form-control field-input text-dark"
+                                       placeholder="Re-enter new password"
+                                       @bind="confirmPassword" />
+                            </div>
+                        }
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    /* ── Profile avatar (clickable) ── */
+    .profile-avatar-wrapper {
+        position: relative;
+        width: 88px;
+        height: 88px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #2BBFB3, #0D9488);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        overflow: hidden;
+        flex-shrink: 0;
+        transition: box-shadow 0.2s ease;
+    }
+
+        .profile-avatar-wrapper:hover {
+            box-shadow: 0 0 0 3px #2BBFB3;
+        }
+
+    .profile-avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+        display: block;
+    }
+
+    .profile-avatar-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(13, 148, 136, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #FFFFFF;
+        opacity: 0;
+        border-radius: 50%;
+        transition: opacity 0.2s ease;
+    }
+
+    .profile-avatar-wrapper:hover .profile-avatar-overlay {
+        opacity: 1;
+    }
+
+    .section-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #1A1A2E;
+        margin: 0 0 4px 0;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #F3F4F6;
+    }
+
+    .field-label {
+        font-size: 12px;
+        color: #6B7280;
+        font-weight: 600;
+        margin-bottom: 4px;
+        display: block;
+    }
+
+    .field-value {
+        font-size: 14px;
+        font-weight: 500;
+        color: #1A1A2E;
+        background-color: #F9FAFB;
+        border: 1px solid #F3F4F6;
+        border-radius: 8px;
+        padding: 10px 14px;
+        min-height: 42px;
+        display: flex;
+        align-items: center;
+    }
+
+    .field-input {
+        background-color: #F9FAFB !important;
+        border: 1px solid #2BBFB3 !important;
+        border-radius: 8px !important;
+        padding: 10px 14px !important;
+        font-size: 14px;
+    }
+</style>
+
+@code {
+    private PatientDto? patient;
+    private PatientDto editModel = new();
+    private bool isEditing = false;
+    private string successMessage = "";
+    private string errorMessage = "";
+    private string newPassword = "";
+    private string confirmPassword = "";
+
+    // ── Profile image ──
+    private string profileImageDataUrl = "";
+    private string imageUploadError = "";
+
+    private async Task TriggerProfilePhotoInput()
+    {
+        await JS.InvokeVoidAsync("eval", "document.getElementById('profileAvatarInput').click()");
+    }
+
+    private async Task HandleProfileImageSelected(InputFileChangeEventArgs e)
+    {
+        imageUploadError = "";
+        var file = e.File;
+
+        if (file.Size > 2 * 1024 * 1024)
+        {
+            imageUploadError = "Image must be under 2 MB.";
+            return;
+        }
+
+        var allowedTypes = new[] { "image/jpeg", "image/png", "image/webp" };
+        if (!allowedTypes.Contains(file.ContentType))
+        {
+            imageUploadError = "Only JPG, PNG, or WEBP images are allowed.";
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var base64 = Convert.ToBase64String(ms.ToArray());
+            profileImageDataUrl = $"data:{file.ContentType};base64,{base64}";
+            if (editModel != null)
+            {
+                editModel.ProfileImageBase64 = base64;
+                editModel.ProfileImageMimeType = file.ContentType;
+            }
+        }
+        catch
+        {
+            imageUploadError = "Failed to load image. Please try again.";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!StateProvider.IsAuthenticated || StateProvider.Role != "Patient") return;
+        await LoadProfile();
+    }
+
+    private async Task LoadProfile()
+    {
+        try
+        {
+            patient = await Http.GetFromJsonAsync<PatientDto>($"api/Patient/{StateProvider.UserId}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Could not load profile. Please try again.";
+            Console.WriteLine($"Profile load error: {ex.Message}");
+        }
+    }
+
+    private void StartEditing()
+    {
+        if (patient == null) return;
+        // Copy current values into edit model
+        editModel = new PatientDto
+        {
+            PatientId = patient.PatientId,
+            FirstName = patient.FirstName,
+            LastName = patient.LastName,
+            Email = patient.Email,
+            Phone = patient.Phone,
+            Gender = patient.Gender,
+            DateOfBirth = patient.DateOfBirth,
+            BloodGroup = patient.BloodGroup,
+            EmergencyContact = patient.EmergencyContact,
+            Username = patient.Username,
+            IsActive = patient.IsActive
+        };
+        newPassword = "";
+        confirmPassword = "";
+        successMessage = "";
+        errorMessage = "";
+        isEditing = true;
+    }
+
+    private void CancelEditing()
+    {
+        isEditing = false;
+        newPassword = "";
+        confirmPassword = "";
+        successMessage = "";
+        errorMessage = "";
+        profileImageDataUrl = "";
+        imageUploadError = "";
+    }
+
+    private async Task SaveProfile()
+    {
+        successMessage = "";
+        errorMessage = "";
+
+        // Validate password change if attempted
+        if (!string.IsNullOrWhiteSpace(newPassword))
+        {
+            if (newPassword != confirmPassword)
+            {
+                errorMessage = "Passwords do not match. Please re-enter.";
+                return;
+            }
+            if (newPassword.Length < 6)
+            {
+                errorMessage = "Password must be at least 6 characters.";
+                return;
+            }
+            editModel.PasswordHash = newPassword;
+        }
+
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/Patient/{StateProvider.UserId}", editModel);
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadProfile();
+                isEditing = false;
+                newPassword = "";
+                confirmPassword = "";
+                successMessage = "Profile updated successfully!";
+            }
+            else
+            {
+                errorMessage = "Failed to save changes. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred while saving. Please try again.";
+            Console.WriteLine($"Save profile error: {ex.Message}");
+        }
+    }
+}

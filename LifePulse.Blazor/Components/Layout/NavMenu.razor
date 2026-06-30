@@ -1,0 +1,140 @@
+﻿@inject LifePulse.Blazor.CustomAuthStateProvider StateProvider
+@inject NavigationManager Nav
+@implements IDisposable
+
+<div class="d-flex flex-column h-100 justify-content-between py-3">
+    <div>
+        <div class="px-4 mb-4">
+            <span style="font-size: 11px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 1px;">
+                @(StateProvider.IsAuthenticated ? $"{StateProvider.Role} Portal" : "System Access")
+            </span>
+        </div>
+
+        <nav class="d-flex flex-column gap-1 px-3">
+            @if (!StateProvider.IsAuthenticated)
+            {
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="login" @onclick="HandleNavClick">
+                    <i class="bi bi-shield-lock"></i> Sign In
+                </NavLink>
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="patient/register" @onclick="HandleNavClick">
+                    <i class="bi bi-person-plus"></i> Register
+                </NavLink>
+            }
+            else if (StateProvider.Role == "Admin")
+            {
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="" Match="NavLinkMatch.All" @onclick="HandleNavClick">
+                    <i class="bi bi-grid"></i> Dashboard
+                </NavLink>
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="admin/doctors" @onclick="HandleNavClick">
+                    <i class="bi bi-person-badge"></i> Doctors
+                </NavLink>
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="admin/patients" @onclick="HandleNavClick">
+                    <i class="bi bi-heart"></i> Patients
+                </NavLink>
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="admin/departments" @onclick="HandleNavClick">
+                    <i class="bi bi-building"></i> Departments
+                </NavLink>
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="admin/checkouts" @onclick="HandleNavClick">
+                    <i class="bi bi-receipt"></i> Billing
+                </NavLink>
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="admin/profile" @onclick="HandleNavClick">
+                    <i class="bi bi-person-gear"></i> My Profile
+                </NavLink>
+            }
+            else if (StateProvider.Role == "Doctor")
+            {
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="doctor/portal" @onclick="HandleNavClick">
+                    <i class="bi bi-capsule"></i> My Workspace
+                </NavLink>
+            }
+            else if (StateProvider.Role == "Patient")
+            {
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="patient/dashboard" Match="NavLinkMatch.All" @onclick="HandleNavClick">
+                    <i class="bi bi-house-heart"></i> My Dashboard
+                </NavLink>
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="patient/appointments" @onclick="HandleNavClick">
+                    <i class="bi bi-calendar-check"></i> Appointments
+                </NavLink>
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="patient/prescriptions" @onclick="HandleNavClick">
+                    <i class="bi bi-prescription2"></i> Prescriptions
+                </NavLink>
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="patient/billing" @onclick="HandleNavClick">
+                    <i class="bi bi-receipt"></i> My Invoices
+                </NavLink>
+                <NavLink class="nav-link d-flex align-items-center gap-3" href="patient/profile" @onclick="HandleNavClick">
+                    <i class="bi bi-person-circle"></i> My Profile
+                </NavLink>
+            }
+
+            @* Back to Landing — shown for all logged-in roles *@
+            @if (StateProvider.IsAuthenticated)
+            {
+                <hr style="border-color: #F3F4F6; margin: 6px 0;" />
+                <button class="nav-link d-flex align-items-center gap-3 w-100 text-start"
+                        style="background:transparent;border:none;"
+                        @onclick='() => Nav.NavigateTo("/landing")'>
+                    <i class="bi bi-house-door"></i> Back to Site
+                </button>
+            }
+        </nav>
+    </div>
+
+    @if (StateProvider.IsAuthenticated)
+    {
+        <div class="px-3">
+            <div class="px-3 py-2 mb-2" style="background-color: #F4F6F9; border-radius: 8px;">
+                <div style="font-size: 13px; font-weight: 600; color: #1A1A2E;">@StateProvider.FullName</div>
+                <div style="font-size: 11px; color: #6B7280;">@StateProvider.Role</div>
+            </div>
+            <hr style="border-color: #F3F4F6; margin: 10px 0;" />
+            <button @onclick="HandleSignOut" class="btn d-flex align-items-center gap-3 w-100 text-start px-3 py-2"
+                    style="color: #E11D48; font-size: 14px; font-weight: 500; background: transparent; border: none;">
+                <i class="bi bi-box-arrow-left"></i> Sign Out
+            </button>
+        </div>
+    }
+</div>
+
+<style>
+    .nav-link {
+        color: #6B7280 !important;
+        background: transparent !important;
+        text-decoration: none !important;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .nav-link:hover { background-color: #F4F6F9 !important; color: #1A1A2E !important; }
+    .nav-link.active { background-color: #E0F7F5 !important; color: #0D9488 !important; font-weight: 600; }
+    .nav-link i { font-size: 18px; }
+</style>
+
+@code {
+    [Parameter] public EventCallback OnNavClick { get; set; }
+
+    protected override void OnInitialized()
+    {
+        StateProvider.OnCurrentUserStateChanged += StateHasChanged;
+    }
+
+    private async Task HandleNavClick()
+    {
+        if (OnNavClick.HasDelegate)
+            await OnNavClick.InvokeAsync();
+    }
+
+    private async Task HandleSignOut()
+    {
+        StateProvider.MarkUserAsLoggedOut();
+        await HandleNavClick();
+        Nav.NavigateTo("login");
+    }
+
+    public void Dispose()
+    {
+        StateProvider.OnCurrentUserStateChanged -= StateHasChanged;
+    }
+}
