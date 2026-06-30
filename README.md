@@ -76,31 +76,55 @@ LifePulse/
 
 ## Screenshots
 
-> 📸 Screenshots coming soon — drop your images here (e.g. into a `/screenshots` folder) and they'll render below.
+### 🌐 Public Landing Page
 
-### Landing Page
-<!-- ![Landing Page](./screenshots/landing-page.png) -->
-
-### Patient Portal
-| Login | Dashboard | Appointments |
+| Hero Section | Services Overview | Our Doctors |
 |---|---|---|
-| <!-- ![Patient Login](./screenshots/patient-login.png) --> | <!-- ![Patient Dashboard](./screenshots/patient-dashboard.png) --> | <!-- ![Patient Appointments](./screenshots/patient-appointments.png) --> |
+| ![Landing Home](./screenshots/landing-home.jpeg) | ![Services](./screenshots/landing-services.jpeg) | ![Our Doctors](./screenshots/landing-our-doctors.jpeg) |
 
-| Prescriptions | Billing | AI Chatbot |
+The landing page introduces LifePulse HMS, highlights core platform capabilities (patient management, scheduling, billing, prescriptions, admin analytics, and the **MediBot AI Assistant**), and lets visitors browse available doctors before signing in.
+
+---
+
+### 🧑‍⚕️ Patient Portal
+
+| Dashboard | Book Appointment | Prescriptions |
 |---|---|---|
-| <!-- ![Prescriptions](./screenshots/patient-prescriptions.png) --> | <!-- ![Billing](./screenshots/patient-billing.png) --> | <!-- ![Chatbot](./screenshots/chatbot.png) --> |
+| ![Patient Dashboard](./screenshots/patient-dashboard.jpeg) | ![Patient Appointments](./screenshots/patient-appointments.jpeg) | ![Patient Prescriptions](./screenshots/patient-prescriptions.jpeg) |
 
-### Doctor Portal
-<!-- ![Doctor Portal](./screenshots/doctor-portal.png) -->
+| Invoices & Billing | My Profile |
+|---|---|
+| ![Patient Billing](./screenshots/patient-billing.jpeg) | ![Patient Profile](./screenshots/patient-profile.jpeg) |
 
-### Admin Portal
-| Departments | Doctors List | Patients List |
+The patient dashboard gives an at-a-glance summary of appointments, prescriptions, and outstanding bills. Patients can search and book appointments by doctor or specialization, track prescription status (active/completed/discontinued), review itemized invoices, and manage their personal profile.
+
+---
+
+### 👨‍⚕️ Doctor Portal
+
+| Doctor Profile | Daily Patient Roster & Prescription Pad |
+|---|---|
+| ![Doctor Profile - Zaib](./screenshots/doctor-profile-zaib.jpeg) | ![Doctor Roster](./screenshots/doctor-roster-prescription.jpeg) |
+
+| Doctor Profile — Tayyab | Doctor Profile — Zara |
+|---|---|
+| ![Doctor Profile - Tayyab](./screenshots/doctor-profile-tayyab.jpeg) | ![Doctor Profile - Zara](./screenshots/doctor-profile-zara.jpeg) |
+
+Each doctor manages their own clinical profile (biography, specialization, contact info) and works from a daily patient roster, where they can view appointment details, mark visits complete or cancel them, and issue digital prescriptions with dosage, frequency, and duration.
+
+---
+
+### 🛠️ Admin Portal
+
+| Dashboard Overview | Doctors Management | Departments |
 |---|---|---|
-| <!-- ![Departments](./screenshots/admin-departments.png) --> | <!-- ![Doctors List](./screenshots/admin-doctors.png) --> | <!-- ![Patients List](./screenshots/admin-patients.png) --> |
+| ![Admin Dashboard](./screenshots/admin-dashboard.jpeg) | ![Admin Doctors List](./screenshots/admin-doctors-list.jpeg) | ![Admin Departments](./screenshots/admin-departments.jpeg) |
 
-| Checkouts / Billing |
+| Onboard New Doctor |
 |---|
-| <!-- ![Checkouts](./screenshots/admin-checkouts.png) --> |
+| ![Admin Add Doctor](./screenshots/admin-add-doctor.jpeg) |
+
+The admin dashboard surfaces hospital-wide metrics (total doctors, registered patients, appointments, department load) at a glance. Admins can onboard doctors with full demographic and clinical deployment details, manage department capacity, and activate/suspend or delete practitioner accounts — all from a centralized control panel.
 
 ---
 
