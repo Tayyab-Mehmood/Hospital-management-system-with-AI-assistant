@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="LifePulse.API/LifePulse.API.csproj" />
+  <Project Path="LifePulse.Blazor/LifePulse.Blazor.csproj" />
+  <Project Path="LifePulse.Shared/LifePulse.Shared.csproj" />
+</Solution>
