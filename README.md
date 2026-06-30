@@ -12,6 +12,7 @@ The system was built as a university project, with a focus on real-world archite
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Screenshots](#screenshots)
+- [MediBot — AI Booking Assistant](#medibot--ai-booking-assistant)
 - [Getting Started](#getting-started)
 - [Security Note](#security-note)
 - [Authors](#authors)
@@ -27,7 +28,7 @@ The system was built as a university project, with a focus on real-world archite
 - View prescriptions issued by doctors
 - View billing history and invoices
 - Manage personal profile, including a profile photo
-- Chat with an AI-powered assistant for general health-related queries
+- Chat with **MediBot**, an AI-powered assistant that can answer hospital questions *and* book appointments for you in natural language (see [MediBot section](#medibot--ai-booking-assistant))
 
 ### 👨‍⚕️ Doctor Portal
 - View appointments assigned by the admin
@@ -128,7 +129,30 @@ The admin dashboard surfaces hospital-wide metrics (total doctors, registered pa
 
 ---
 
-## Getting Started
+## MediBot — AI Booking Assistant
+
+LifePulse ships with **MediBot**, an AI assistant (powered by Groq's `llama-3.3-70b-versatile`) embedded as a floating chat widget across the platform. MediBot isn't just an FAQ bot — it's tied directly into live hospital data and can actually **complete actions on your behalf**, not just answer questions about them.
+
+**What MediBot can do:**
+- Answer questions about doctors, departments, specializations, working hours, and consultation fees — pulled from real-time hospital data, not static scripts
+- **Book appointments through natural conversation.** Tell it something like *"book my appointment with Dr. Tayyab on Wednesday at 10 AM"*, and it validates the doctor's schedule and working hours, summarizes the appointment, and asks for confirmation before creating it
+- Once you confirm, the appointment is created instantly and reflected in **My Appointments** and **My Dashboard** — no need to go fill out the booking form manually
+
+> ⚠️ **Booking through MediBot requires you to be registered and logged in** as a patient. The assistant ties bookings to your authenticated account, so it knows who it's booking for and can validate against your existing appointments.
+
+**Session persistence:** Once you log in, your session is stored and persists across page reloads and visits — you **don't need to log in again every time** to chat with MediBot or book appointments. You'll only be prompted to log in again once your session expires, so casual back-and-forth booking conversations stay smooth without repeated authentication interruptions.
+
+| MediBot Greeting | Natural-Language Booking Request |
+|---|---|
+| ![MediBot Greeting](./screenshots/medibot-greeting.jpeg) | ![MediBot Booking Request](./screenshots/medibot-booking-request.jpeg) |
+
+| Confirmation Step | Appointment Reflected on Dashboard |
+|---|---|
+| ![MediBot Booking Confirmed](./screenshots/medibot-booking-confirmed.jpeg) | ![Dashboard After Booking](./screenshots/patient-dashboard-medibot-result.jpeg) |
+
+MediBot greets the logged-in patient by name, parses the natural-language request, cross-checks it against the doctor's actual availability and working hours, and asks for a final **YES** before committing the booking — after which the new appointment immediately shows up under **Recent Appointments** on the patient's dashboard.
+
+---
 
 ### Prerequisites
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
@@ -153,9 +177,16 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=YOUR_SERVE
 dotnet user-secrets set "GroqApiKey" "your-groq-api-key"
 ```
 
+Alternatively, copy `appsettings.example.json` to `appsettings.json` inside `LifePulse.API/` and fill in your own values — just don't commit it.
 
+### 3. Apply database migrations
 
-### 3. Run the application
+```bash
+cd LifePulse.API
+dotnet ef database update
+```
+
+### 4. Run the application
 
 ```bash
 dotnet run --project LifePulse.API
